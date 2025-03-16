@@ -99,11 +99,11 @@ def set_permissions(file_id):
 # -------------------------
 def create_presentation(routine_data):
     """
-    Crea una presentación en Google Slides basada en una plantilla, aplicando estilos profesionales.
-    - El título se muestra en la esquina superior izquierda, casi pegado al borde superior.
-    - El título se llena automáticamente con "Día X".
-    - La tabla se posiciona de forma dinámica y centrada horizontalmente.
-    - La columna "Series" se reduce a un ancho fijo (50 PT).
+    Crea una presentación en Google Slides basada en una plantilla, aplicando estilos profesionales:
+      - El título se muestra en la esquina superior izquierda, casi pegado al borde.
+      - Se inserta el título como "Día X" con fondo azul, texto blanco y centrado.
+      - La tabla se posiciona de forma dinámica, siempre centrada horizontalmente y se ajusta su tamaño.
+      - La columna "Series" se reduce a un ancho fijo de 50 PT.
     """
     print("🚀 Creando una nueva presentación desde la plantilla...")
 
@@ -117,12 +117,13 @@ def create_presentation(routine_data):
 
     # Obtener las diapositivas existentes
     presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
-    slides = presentation.get('slides', [])
+    slides = presentation.get("slides", [])
     num_existing_slides = len(slides)
 
-    # Posiciones y tamaños fijos (ajustables)
+    # Definir posiciones fijas para el título y la tabla
     title_x, title_y = 50, 10        # Título pegado al borde superior
     table_x, table_y = 50, 80        # Posición de la tabla
+
     default_table_width = 600        # Ancho total de la tabla
     default_table_height = 250       # Alto total de la tabla
 
@@ -133,7 +134,7 @@ def create_presentation(routine_data):
         title_id = f"title_{i}"
         table_id = f"table_{i}"
 
-        # Crear nueva diapositiva con el layout personalizado
+        # Crear nueva diapositiva usando el layout predefinido
         requests.append({
             "createSlide": {
                 "objectId": slide_id,
@@ -144,7 +145,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar título (se asume que el layout no tiene placeholder para el título)
+        # Insertar título: "Día X"
         requests.append({
             "createShape": {
                 "objectId": title_id,
@@ -198,11 +199,9 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar tabla en la diapositiva (centrada horizontalmente)
-        num_rows = len(rutina["rutina"]) + 1  # +1 para encabezados
-        num_cols = 3  # Ejercicio, Series, Repeticiones
-
-        # Ajustar tamaño de la tabla y posición para centrar
+        # Insertar tabla centrada en la diapositiva
+        num_rows = len(rutina["rutina"]) + 1
+        num_cols = 3
         table_width = default_table_width
         table_height = default_table_height
 
@@ -257,7 +256,7 @@ def create_presentation(routine_data):
 
         # Actualizar el ancho de la columna "Series" (columna 1) a 50 PT
         requests.append({
-            "updateTableColumnProperties": {
+            "resizeTableColumn": {
                 "objectId": table_id,
                 "tableColumnProperties": {
                     "columnWidth": {"magnitude": 50, "unit": "PT"}
@@ -270,7 +269,7 @@ def create_presentation(routine_data):
             }
         })
 
-    # Enviar solicitudes de contenido y formato en un solo batchUpdate
+    # Enviar las solicitudes en un solo batchUpdate
     try:
         slides_service.presentations().batchUpdate(
             presentationId=presentation_id,
@@ -283,4 +282,16 @@ def create_presentation(routine_data):
 
     set_permissions(presentation_id)
     return f"https://docs.google.com/presentation/d/{presentation_id}"
+
+def set_permissions(file_id):
+    """Da permisos de edición a cualquiera con el enlace en Google Drive."""
+    permission = {
+        "type": "anyone",
+        "role": "writer"
+    }
+    drive_service.permissions().create(
+        fileId=file_id,
+        body=permission
+    ).execute()
+    print("✅ Permisos de edición configurados.")
 
