@@ -25,7 +25,7 @@ def send_telegram_message_with_inline_keyboard(chat_id, text, inline_keyboard):
     :param text: Texto del mensaje
     :param inline_keyboard: Lista de listas con los botones del teclado en línea
     """
-    url = f"{TELEGRAM_API_URL}/sendMessage"
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
         "chat_id": chat_id,
         "text": text,
