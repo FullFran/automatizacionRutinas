@@ -4,7 +4,6 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import json
 
-
 # 🔹 Configuración de credenciales
 SCOPES = ["https://www.googleapis.com/auth/drive",
           "https://www.googleapis.com/auth/presentations"]
@@ -31,16 +30,6 @@ except Exception as e:
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
 
 
-def _hex_to_rgb(hex_color):
-    """Convierte un color HEX a RGB para la API de Google Slides."""
-    hex_color = hex_color.lstrip('#')
-    return {
-        "red": int(hex_color[0:2], 16) / 255.0,
-        "green": int(hex_color[2:4], 16) / 255.0,
-        "blue": int(hex_color[4:6], 16) / 255.0
-    }
-
-
 def create_presentation(routine_data):
     """
     Crea una presentación en Google Slides a partir de una plantilla y formatea el contenido con tablas.
@@ -58,34 +47,18 @@ def create_presentation(routine_data):
     # 🔹 Obtener las diapositivas existentes
     presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
     slides = presentation.get('slides', [])
+    num_existing_slides = len(slides)  # Guardamos el número de diapositivas iniciales
 
-    # 🔹 Aplicar fondo negro a todas las diapositivas
+    # 🔹 Crear diapositivas para cada rutina DESPUÉS de las diapositivas existentes
     requests = []
-    for slide in slides:
-        slide_id = slide["objectId"]
-        requests.append({
-            "updatePageProperties": {
-                "objectId": slide_id,
-                "pageProperties": {
-                    "pageBackgroundFill": {
-                        "solidFill": {
-                            "color": {"rgbColor": _hex_to_rgb("#000000")}
-                        }
-                    }
-                },
-                "fields": "pageBackgroundFill.solidFill.color"
-            }
-        })
-
-    # 🔹 Crear diapositivas para cada rutina
     for i, rutina in enumerate(routine_data):
-        slide_id = f"slide_{i}"
+        slide_id = f"slide_{i + num_existing_slides}"  # Evitamos sobrescribir IDs de las diapositivas ya existentes
         
         # Agregar diapositiva
         requests.append({
             "createSlide": {
                 "objectId": slide_id,
-                "insertionIndex": str(i),
+                "insertionIndex": str(i + num_existing_slides)  # Se insertan después de las ya existentes
             }
         })
 
@@ -130,7 +103,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar títulos de las columnas
+        # Insertar títulos de las columnas con texto blanco y negrita
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, text in enumerate(headers):
             requests.append({
@@ -138,6 +111,19 @@ def create_presentation(routine_data):
                     "objectId": table_id,
                     "cellLocation": {"rowIndex": 0, "columnIndex": col},
                     "text": text
+                }
+            })
+            requests.append({
+                "updateTextStyle": {
+                    "objectId": table_id,
+                    "cellLocation": {"rowIndex": 0, "columnIndex": col},
+                    "style": {
+                        "bold": True,
+                        "foregroundColor": {
+                            "opaqueColor": {"rgbColor": {"red": 1.0, "green": 1.0, "blue": 1.0}}  # Blanco
+                        }
+                    },
+                    "fields": "bold,foregroundColor"
                 }
             })
 
@@ -177,7 +163,15 @@ def create_presentation(routine_data):
                     },
                     "tableCellProperties": {
                         "tableCellBackgroundFill": {
-                            "solidFill": {"color": {"rgbColor": _hex_to_rgb(background_color)}}
+                            "solidFill": {
+                                "color": {
+                                    "rgbColor": {
+                                        "red": int(background_color[1:3], 16) / 255.0,
+                                        "green": int(background_color[3:5], 16) / 255.0,
+                                        "blue": int(background_color[5:7], 16) / 255.0
+                                    }
+                                }
+                            }
                         }
                     },
                     "fields": "tableCellBackgroundFill.solidFill.color"
@@ -214,3 +208,4 @@ def set_permissions(file_id):
         fileId=file_id,
         body=permission
     ).execute()
+    print("✅ Permisos de edición configurados.")
