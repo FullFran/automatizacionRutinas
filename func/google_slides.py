@@ -26,19 +26,17 @@ except json.JSONDecodeError as e:
 except Exception as e:
     raise ValueError(f"❌ ERROR en la autenticación con Google: {str(e)}")
 
-# 🔹 ID de la plantilla de presentación y layout de rutinas
+# 🔹 ID de la plantilla de presentación
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
 ROUTINE_LAYOUT_ID = os.getenv("ROUTINE_LAYOUT_ID")  # ID del layout específico para rutinas
 
-if not TEMPLATE_PRESENTATION_ID:
-    raise ValueError("⚠ ERROR: No se encontró TEMPLATE_PRESENTATION_ID en las variables de entorno.")
-
-if not ROUTINE_LAYOUT_ID:
-    raise ValueError("⚠ ERROR: No se encontró ROUTINE_LAYOUT_ID en las variables de entorno.")
+# 🔹 Dimensiones de la diapositiva (Google Slides usa PT como unidad)
+SLIDE_WIDTH = 960  # Ancho estándar
+SLIDE_HEIGHT = 540  # Alto estándar
 
 def create_presentation(routine_data):
     """
-    Crea una presentación en Google Slides basada en una plantilla, aplicando estilos profesionales.
+    Crea una presentación en Google Slides basada en una plantilla, agregando texto y tablas sin placeholders.
     """
     print("🚀 Creando una nueva presentación desde la plantilla...")
 
@@ -55,10 +53,10 @@ def create_presentation(routine_data):
     slides = presentation.get('slides', [])
     num_existing_slides = len(slides)
 
-    # 🔹 Crear diapositivas para cada rutina usando el layout predefinido
+    # 🔹 Crear diapositivas para cada rutina sin usar placeholders
     requests = []
     for i, rutina in enumerate(routine_data):
-        slide_id = f"slide_{i + num_existing_slides}"  # Evitamos sobrescribir IDs existentes
+        slide_id = f"slide_{i + num_existing_slides}"
 
         # Crear una nueva diapositiva con el layout personalizado
         requests.append({
@@ -71,7 +69,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # 🔹 Insertar título de la rutina
+        # 🔹 Crear título manualmente como TEXT_BOX y centrarlo arriba
         title_id = f"title_{i}"
         requests.append({
             "createShape": {
@@ -81,54 +79,35 @@ def create_presentation(routine_data):
                     "pageObjectId": slide_id,
                     "size": {
                         "height": {"magnitude": 50, "unit": "PT"},
-                        "width": {"magnitude": 400, "unit": "PT"}
+                        "width": {"magnitude": 700, "unit": "PT"}
                     },
                     "transform": {
-                        "scaleX": 1, "scaleY": 1,
-                        "translateX": 50,  # Ajustar la posición horizontal
-                        "translateY": 20,  # Pegado al borde superior
+                        "scaleX": 1, "scaleY": 1, 
+                        "translateX": (SLIDE_WIDTH - 700) / 2,  # Centrado horizontalmente
+                        "translateY": 20,  # Mucho más arriba
                         "unit": "PT"
                     }
                 }
             }
         })
+
+        # Insertar el texto del título
         requests.append({
             "insertText": {
                 "objectId": title_id,
-                "text": f"Día {i + 1}"
-            }
-        })
-        requests.append({
-            "updateTextStyle": {
-                "objectId": title_id,
-                "style": {
-                    "bold": True,
-                    "fontSize": {"magnitude": 24, "unit": "PT"},
-                    "foregroundColor": {
-                        "opaqueColor": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}  # Blanco
-                    }
-                },
-                "fields": "bold,fontSize,foregroundColor"
-            }
-        })
-        requests.append({
-            "updateShapeProperties": {
-                "objectId": title_id,
-                "shapeProperties": {
-                    "shapeBackgroundFill": {
-                        "solidFill": {
-                            "color": {"rgbColor": {"red": 0.0, "green": 0.2, "blue": 0.8}}  # Azul oscuro
-                        }
-                    }
-                },
-                "fields": "shapeBackgroundFill.solidFill.color"
+                "text": f"Rutina {i + 1}"
             }
         })
 
-        # 🔹 Insertar la tabla en la diapositiva
+        # 🔹 Insertar tabla centrada dinámicamente
         num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
         table_id = f"table_{i}"
+
+        table_width = 600  # Ancho de la tabla
+        table_height = num_rows * 30  # Ajustar altura según cantidad de filas
+        table_x = (SLIDE_WIDTH - table_width) / 2  # Centrar tabla en X
+        table_y = (SLIDE_HEIGHT - table_height) / 2 + 30  # Centrar tabla en Y, dejando espacio para el título
 
         requests.append({
             "createTable": {
@@ -138,20 +117,20 @@ def create_presentation(routine_data):
                 "elementProperties": {
                     "pageObjectId": slide_id,
                     "size": {
-                        "height": {"magnitude": 200, "unit": "PT"},
-                        "width": {"magnitude": 600, "unit": "PT"}
+                        "width": {"magnitude": table_width, "unit": "PT"},
+                        "height": {"magnitude": table_height, "unit": "PT"}
                     },
                     "transform": {
-                        "scaleX": 1, "scaleY": 1,
-                        "translateX": 80,  # Centrar la tabla
-                        "translateY": 100,  # Ajustar la posición superior
+                        "scaleX": 1, "scaleY": 1, 
+                        "translateX": table_x, 
+                        "translateY": table_y, 
                         "unit": "PT"
                     }
                 }
             }
         })
 
-        # 🔹 Insertar títulos de las columnas
+        # 🔹 Insertar títulos de las columnas con texto blanco y negrita
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, text in enumerate(headers):
             requests.append({
@@ -175,7 +154,7 @@ def create_presentation(routine_data):
                 }
             })
 
-        # 🔹 Insertar datos en la tabla
+        # 🔹 Insertar datos en la tabla con formato
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests.append({
                 "insertText": {
@@ -199,17 +178,33 @@ def create_presentation(routine_data):
                 }
             })
 
-    slides_service.presentations().batchUpdate(
-        presentationId=presentation_id,
-        body={"requests": requests}
-    ).execute()
+    # 🔹 Enviar todas las solicitudes a la API
+    try:
+        slides_service.presentations().batchUpdate(
+            presentationId=presentation_id,
+            body={"requests": requests}
+        ).execute()
+        print("✅ Presentación generada exitosamente.")
+    except Exception as e:
+        print(f"❌ ERROR al generar la presentación: {e}")
+        return None
 
+    # 🔹 Hacer la presentación pública y editable
     set_permissions(presentation_id)
+
     return f"https://docs.google.com/presentation/d/{presentation_id}"
 
 def set_permissions(file_id):
+    """
+    Da permisos de edición a cualquier persona con el enlace en Google Drive.
+    """
+    permission = {
+        "type": "anyone",
+        "role": "writer"
+    }
+
     drive_service.permissions().create(
         fileId=file_id,
-        body={"type": "anyone", "role": "writer"}
+        body=permission
     ).execute()
     print("✅ Permisos de edición configurados.")
