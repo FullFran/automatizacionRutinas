@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from func.routine_parser import parse_routine
-# from func.google_slides import create_presentation
+from func.google_slides import create_presentation
 from func.telegram_bot import send_telegram_message, set_webhook
 
 app = FastAPI()
@@ -16,7 +16,7 @@ async def telegram_webhook(request: Request):
         structured_routine = parse_routine(text)
 
         # Crear la presentación en Google Slides
-  #      presentation_link = create_presentation(structured_routine)
+        # presentation_link = create_presentation(structured_routine)
         presentation_link = structured_routine
         # Enviar el enlace al usuario por Telegram
         send_telegram_message(chat_id, f"Tu rutina ha sido procesada. Aquí tienes la presentación: {presentation_link}")
