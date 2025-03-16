@@ -1,4 +1,5 @@
 import os
+import time
 import json
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -116,21 +117,20 @@ def create_presentation(routine_data):
     slides = presentation.get('slides', [])
     num_existing_slides = len(slides)
 
-    # Dimensiones de la diapositiva (Google Slides usa PT como unidad)
-    SLIDE_WIDTH = 960
-    SLIDE_HEIGHT = 540
+    # Definir posiciones fijas (márgenes)
+    title_x, title_y = 50, 10     # El título estará muy arriba
+    table_x, table_y = 50, 80     # La tabla estará debajo del título, centrada horizontalmente
 
-    title_x, title_y = 150, 20  # El título estará mucho más arriba y centrado
-    table_x = (SLIDE_WIDTH - 600) / 2  # Centrar tabla horizontalmente
-    table_y = 120  # Colocarla debajo del título
+    # Variables para ajustar tamaño de la tabla (se pueden ajustar dinámicamente)
+    default_table_width = 600
+    default_table_height = 250
 
-    requests_text = []  # Para insertar contenido
-    requests_format = []  # Para aplicar estilos
+    requests_text = []  # Para insertar contenido (crear diapositivas, insertar textos, crear tablas)
+    requests_format = []  # Para aplicar estilos (colores, fuentes)
 
     for i, rutina in enumerate(routine_data):
+        # Crear nueva diapositiva usando el layout predefinido
         slide_id = f"slide_{i + num_existing_slides}"
-
-        # Crear nueva diapositiva
         requests_text.append({
             "createSlide": {
                 "objectId": slide_id,
@@ -141,7 +141,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar título
+        # Insertar título en la diapositiva: "Día 1", "Día 2", etc.
         title_id = f"title_{i}"
         requests_text.append({
             "createShape": {
@@ -162,12 +162,46 @@ def create_presentation(routine_data):
                 }
             }
         })
-        requests_text.append({"insertText": {"objectId": title_id, "text": f"Día {i + 1}"}})
+        requests_text.append({
+            "insertText": {
+                "objectId": title_id,
+                "text": f"Día {i + 1}"
+            }
+        })
+        requests_format.append({
+            "updateTextStyle": {
+                "objectId": title_id,
+                "style": {
+                    "bold": True,
+                    "fontSize": {"magnitude": 24, "unit": "PT"},
+                    "foregroundColor": {
+                        "opaqueColor": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}  # Blanco
+                    }
+                },
+                "fields": "bold,fontSize,foregroundColor"
+            }
+        })
+        requests_format.append({
+            "updateShapeProperties": {
+                "objectId": title_id,
+                "shapeProperties": {
+                    "shapeBackgroundFill": {
+                        "solidFill": {
+                            "color": {"rgbColor": {"red": 0.0, "green": 0.2, "blue": 0.8}}  # Azul oscuro
+                        }
+                    }
+                },
+                "fields": "shapeBackgroundFill.solidFill.color"
+            }
+        })
 
-        # Insertar tabla
-        num_rows = len(rutina["rutina"]) + 1
+        # Insertar tabla en la diapositiva
+        num_rows = len(rutina["rutina"]) + 1  # Encabezado + filas de datos
         num_cols = 3
         table_id = f"table_{i}"
+        # Ajustar tamaño de la tabla (se puede modificar según necesidad)
+        table_width = default_table_width
+        table_height = default_table_height
 
         requests_text.append({
             "createTable": {
@@ -177,8 +211,8 @@ def create_presentation(routine_data):
                 "elementProperties": {
                     "pageObjectId": slide_id,
                     "size": {
-                        "width": {"magnitude": 600, "unit": "PT"},
-                        "height": {"magnitude": 250, "unit": "PT"}
+                        "height": {"magnitude": table_height, "unit": "PT"},
+                        "width": {"magnitude": table_width, "unit": "PT"}
                     },
                     "transform": {
                         "scaleX": 1, "scaleY": 1,
@@ -190,20 +224,68 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar encabezados
+        # Insertar encabezados de la tabla
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, header_text in enumerate(headers):
             requests_text.append(_insert_table_text(table_id, 0, col, header_text))
+            requests_format.append({
+                "updateTextStyle": {
+                    "objectId": table_id,
+                    "cellLocation": {"rowIndex": 0, "columnIndex": col},
+                    "style": {
+                        "bold": True,
+                        "foregroundColor": {
+                            "opaqueColor": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}
+                        }
+                    },
+                    "fields": "bold,foregroundColor"
+                }
+            })
 
-        # Insertar datos en la tabla con colores alternos
+        # Insertar datos en la tabla y aplicar colores alternos
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests_text.append(_insert_table_text(table_id, row, 0, exercise["ejercicio"]))
             requests_text.append(_insert_table_text(table_id, row, 1, exercise["series"]))
             requests_text.append(_insert_table_text(table_id, row, 2, ", ".join(exercise["repeticiones"])))
+            # Definir color de fondo alternado: tonos de gris
+            row_color = "#333333" if row % 2 == 0 else "#444444"
+            for col in range(num_cols):
+                requests_format.append(_format_table_cell(table_id, row, col, row_color))
 
-    # Enviar solicitudes
-    slides_service.presentations().batchUpdate(presentationId=presentation_id, body={"requests": requests_text}).execute()
-    print("✅ Presentación generada exitosamente.")
+    # Enviar primero las solicitudes de contenido
+    try:
+        slides_service.presentations().batchUpdate(
+            presentationId=presentation_id,
+            body={"requests": requests_text}
+        ).execute()
+        print("✅ Contenido insertado exitosamente.")
+    except Exception as e:
+        print(f"❌ ERROR al insertar contenido: {e}")
+        return None
+
+    # Enviar luego las solicitudes de formato
+    try:
+        slides_service.presentations().batchUpdate(
+            presentationId=presentation_id,
+            body={"requests": requests_format}
+        ).execute()
+        print("✅ Formato aplicado exitosamente.")
+    except Exception as e:
+        print(f"❌ ERROR al aplicar formato: {e}")
+        return None
 
     set_permissions(presentation_id)
+    print("✅ Presentación generada exitosamente.")
     return f"https://docs.google.com/presentation/d/{presentation_id}"
+
+def set_permissions(file_id):
+    """Da permisos de edición a cualquier persona con el enlace."""
+    permission = {
+        "type": "anyone",
+        "role": "writer"
+    }
+    drive_service.permissions().create(
+        fileId=file_id,
+        body=permission
+    ).execute()
+    print("✅ Permisos de edición configurados.")
