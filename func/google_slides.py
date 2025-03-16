@@ -1,8 +1,8 @@
 import os
 import time
+import json
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-import json
 
 # 🔹 Configuración de credenciales
 SCOPES = ["https://www.googleapis.com/auth/drive",
@@ -28,14 +28,14 @@ except Exception as e:
 
 # 🔹 ID de la plantilla de presentación
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
-
+ROUTINE_LAYOUT_ID = os.getenv("ROUTINE_LAYOUT_ID")  # ID del layout específico para rutinas
 
 def create_presentation(routine_data):
     """
-    Crea una presentación en Google Slides a partir de una plantilla y formatea el contenido con tablas.
+    Crea una presentación en Google Slides basada en una plantilla, aplicando estilos profesionales.
     """
     print("🚀 Creando una nueva presentación desde la plantilla...")
-    
+
     # Copiar la plantilla en una nueva presentación
     copy = drive_service.files().copy(
         fileId=TEMPLATE_PRESENTATION_ID,
@@ -47,51 +47,29 @@ def create_presentation(routine_data):
     # 🔹 Obtener las diapositivas existentes
     presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
     slides = presentation.get('slides', [])
-    num_existing_slides = len(slides)  # Guardamos el número de diapositivas iniciales
+    num_existing_slides = len(slides)
 
-    # 🔹 Crear diapositivas para cada rutina DESPUÉS de las diapositivas existentes
+    # 🔹 Crear diapositivas para cada rutina usando el layout predefinido
     requests = []
     for i, rutina in enumerate(routine_data):
-        slide_id = f"slide_{i + num_existing_slides}"  # Evitamos sobrescribir IDs de las diapositivas ya existentes
-        
-        # Agregar diapositiva
+        slide_id = f"slide_{i + num_existing_slides}"  # Evitamos sobrescribir IDs existentes
+
+        # Crear una nueva diapositiva con el layout personalizado
         requests.append({
             "createSlide": {
                 "objectId": slide_id,
-                "insertionIndex": str(i + num_existing_slides)  # Se insertan después de las ya existentes
-            }
-        })
-
-        # Agregar título
-        title_id = f"title_{i}"
-        requests.append({
-            "createShape": {
-                "objectId": title_id,
-                "shapeType": "TEXT_BOX",
-                "elementProperties": {
-                    "pageObjectId": slide_id,
-                    "size": {
-                        "height": {"magnitude": 50, "unit": "PT"},
-                        "width": {"magnitude": 400, "unit": "PT"}
-                    },
-                    "transform": {
-                        "scaleX": 1, "scaleY": 1, "translateX": 50, "translateY": 50, "unit": "PT"
-                    }
+                "insertionIndex": str(i + num_existing_slides),
+                "slideLayoutReference": {
+                    "objectId": ROUTINE_LAYOUT_ID  # Usamos el layout específico para rutinas
                 }
             }
         })
-        requests.append({
-            "insertText": {
-                "objectId": title_id,
-                "text": f"Rutina {i + 1}"
-            }
-        })
 
-        # 🔹 Insertar tabla de ejercicios
+        # 🔹 Insertar la tabla en la diapositiva
         num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
         table_id = f"table_{i}"
-        
+
         requests.append({
             "createTable": {
                 "objectId": table_id,
@@ -103,7 +81,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar títulos de las columnas con texto blanco y negrita
+        # 🔹 Insertar títulos de las columnas
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, text in enumerate(headers):
             requests.append({
@@ -113,6 +91,7 @@ def create_presentation(routine_data):
                     "text": text
                 }
             })
+            # Aplicar estilo a los encabezados (blanco y negrita)
             requests.append({
                 "updateTextStyle": {
                     "objectId": table_id,
@@ -120,14 +99,14 @@ def create_presentation(routine_data):
                     "style": {
                         "bold": True,
                         "foregroundColor": {
-                            "opaqueColor": {"rgbColor": {"red": 0.0, "green": 0.0, "blue": 0.0}}  # Color del texto encabezado
+                            "opaqueColor": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}  # Blanco
                         }
                     },
                     "fields": "bold,foregroundColor"
                 }
             })
 
-        # Insertar datos en la tabla y aplicar formato a las celdas
+        # 🔹 Insertar datos en la tabla y aplicar formato
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests.append({
                 "insertText": {
@@ -151,8 +130,9 @@ def create_presentation(routine_data):
                 }
             })
 
-            # Aplicar color de fondo alterno en las filas
-            background_color = "#111111" if row % 2 == 0 else "#333333" # alterna entre dos tonos de gris
+            # Aplicar color de fondo alterno a las filas de la tabla
+            row_color = {"red": 0.1, "green": 0.2, "blue": 0.5} if row % 2 == 0 else {"red": 0.2, "green": 0.4, "blue": 0.8}
+
             requests.append({
                 "updateTableCellProperties": {
                     "objectId": table_id,
@@ -164,13 +144,7 @@ def create_presentation(routine_data):
                     "tableCellProperties": {
                         "tableCellBackgroundFill": {
                             "solidFill": {
-                                "color": {
-                                    "rgbColor": {
-                                        "red": int(background_color[1:3], 16) / 255.0,
-                                        "green": int(background_color[3:5], 16) / 255.0,
-                                        "blue": int(background_color[5:7], 16) / 255.0
-                                    }
-                                }
+                                "color": {"rgbColor": row_color}
                             }
                         }
                     },
@@ -193,7 +167,6 @@ def create_presentation(routine_data):
     set_permissions(presentation_id)
 
     return f"https://docs.google.com/presentation/d/{presentation_id}"
-
 
 def set_permissions(file_id):
     """
