@@ -32,11 +32,8 @@ except Exception as e:
 # 🔹 ID de la plantilla de presentación
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
 
-# 🔹 Colores para mejorar el diseño
-BACKGROUND_COLOR = "#000000"  # Fondo negro
-TEXT_COLOR = "#FFFFFF"  # Texto blanco
-HEADER_COLOR = "#444444"  # Encabezados en gris oscuro
-ROW_COLORS = ["#222222", "#333333"]  # Alternancia de colores en filas
+if not TEMPLATE_PRESENTATION_ID:
+    raise ValueError("⚠ ERROR: No se encontró TEMPLATE_PRESENTATION_ID en las variables de entorno.")
 
 
 def create_presentation(routine_data):
@@ -51,105 +48,120 @@ def create_presentation(routine_data):
             fileId=TEMPLATE_PRESENTATION_ID,
             body={"name": "Rutina de Entrenamiento Generada"}
         ).execute()
-        presentation_id = copy["id"]
+        presentation_id = copy.get("id")
+
+        if not presentation_id:
+            print("❌ ERROR: No se pudo obtener el ID de la nueva presentación.")
+            return None
+
         print(f"✅ Presentación creada: {presentation_id}")
+
     except Exception as e:
         print(f"❌ ERROR al copiar la plantilla: {str(e)}")
         return None
 
-    requests = []
+    requests_text = []
+    requests_format = []
 
-    for i, rutina in enumerate(routine_data):
-        slide_id = f"slide_{i}"
-        title_id = f"title_{i}"
-        table_id = f"table_{i}"
-
-        # 🔹 Crear una nueva diapositiva basada en la plantilla
-        requests.append({
-            "createSlide": {
-                "objectId": slide_id
-            }
-        })
-
-        # 🔹 Establecer fondo negro en la diapositiva
-        requests.append({
-            "updatePageProperties": {
-                "objectId": slide_id,
-                "pageProperties": {
-                    "pageBackgroundFill": {
-                        "solidFill": {"color": {"rgbColor": _hex_to_rgb(BACKGROUND_COLOR)}}
-                    }
-                },
-                "fields": "pageProperties.pageBackgroundFill.solidFill.color"
-            }
-        })
-
-        # 🔹 Crear un cuadro de texto para el título
-        requests.append({
-            "createShape": {
-                "objectId": title_id,
-                "shapeType": "TEXT_BOX",
-                "elementProperties": {
-                    "pageObjectId": slide_id,
-                    "size": {
-                        "height": {"magnitude": 50, "unit": "PT"},
-                        "width": {"magnitude": 400, "unit": "PT"}
-                    },
-                    "transform": {
-                        "scaleX": 1, "scaleY": 1, "translateX": 50, "translateY": 20, "unit": "PT"
-                    }
-                }
-            }
-        })
-
-        # 🔹 Insertar el título de la rutina
-        requests.append({
-            "insertText": {
-                "objectId": title_id,
-                "text": f"Rutina {i + 1}"
-            }
-        })
-
-        # 🔹 Crear una tabla bien estructurada
-        num_rows = len(rutina["rutina"]) + 1
-        num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
-
-        requests.append({
-            "createTable": {
-                "objectId": table_id,
-                "rows": num_rows,
-                "columns": num_cols,
-                "elementProperties": {
-                    "pageObjectId": slide_id
-                }
-            }
-        })
-
-        # 🔹 Insertar títulos de las columnas con fondo oscuro
-        headers = ["Ejercicio", "Series", "Repeticiones"]
-        for col, text in enumerate(headers):
-            requests.append(_format_table_cell(table_id, 0, col, text, HEADER_COLOR))
-
-        # 🔹 Insertar datos en la tabla con colores alternos
-        for row, exercise in enumerate(rutina["rutina"], start=1):
-            color = ROW_COLORS[row % 2]  # Alternancia de colores en filas
-            requests.append(_format_table_cell(table_id, row, 0, exercise["ejercicio"], color))
-            requests.append(_format_table_cell(table_id, row, 1, exercise["series"], color))
-            requests.append(_format_table_cell(table_id, row, 2, ", ".join(exercise["repeticiones"]), color))
-
-    # 🔹 Ejecutar todas las solicitudes en un solo batchUpdate
     try:
+        for i, rutina in enumerate(routine_data):
+            slide_id = f"slide_{i}"
+            title_id = f"title_{i}"
+            table_id = f"table_{i}"
+
+            # 🔹 Crear una nueva diapositiva
+            requests_text.append({"createSlide": {"objectId": slide_id}})
+
+            # 🔹 Establecer fondo negro
+            requests_text.append({
+                "updatePageProperties": {
+                    "objectId": slide_id,
+                    "pageProperties": {
+                        "pageBackgroundFill": {
+                            "solidFill": {"color": {"rgbColor": _hex_to_rgb("#000000")}}
+                        }
+                    },
+                    "fields": "pageProperties.pageBackgroundFill.solidFill.color"
+                }
+            })
+
+            # 🔹 Crear cuadro de texto para el título
+            requests_text.append({
+                "createShape": {
+                    "objectId": title_id,
+                    "shapeType": "TEXT_BOX",
+                    "elementProperties": {
+                        "pageObjectId": slide_id,
+                        "size": {
+                            "height": {"magnitude": 50, "unit": "PT"},
+                            "width": {"magnitude": 400, "unit": "PT"}
+                        },
+                        "transform": {
+                            "scaleX": 1, "scaleY": 1, "translateX": 50, "translateY": 20, "unit": "PT"
+                        }
+                    }
+                }
+            })
+
+            # 🔹 Insertar título
+            requests_text.append({
+                "insertText": {
+                    "objectId": title_id,
+                    "text": f"Rutina {i + 1}"
+                }
+            })
+
+            # 🔹 Crear tabla para ejercicios
+            num_rows = len(rutina["rutina"]) + 1
+            num_cols = 3
+
+            requests_text.append({
+                "createTable": {
+                    "objectId": table_id,
+                    "rows": num_rows,
+                    "columns": num_cols,
+                    "elementProperties": {
+                        "pageObjectId": slide_id
+                    }
+                }
+            })
+
+            # 🔹 Insertar títulos de columna
+            headers = ["Ejercicio", "Series", "Repeticiones"]
+            for col, text in enumerate(headers):
+                requests_text.append(_insert_table_text(table_id, 0, col, text))
+                requests_format.append(_format_table_cell(table_id, 0, col, "#444444"))  # Color gris oscuro
+
+            # 🔹 Insertar datos en la tabla
+            for row, exercise in enumerate(rutina["rutina"], start=1):
+                color = "#222222" if row % 2 == 0 else "#333333"  # Alternar colores de fila
+                requests_text.append(_insert_table_text(table_id, row, 0, exercise["ejercicio"]))
+                requests_text.append(_insert_table_text(table_id, row, 1, exercise["series"]))
+                requests_text.append(_insert_table_text(table_id, row, 2, ", ".join(exercise["repeticiones"])))
+
+                requests_format.append(_format_table_cell(table_id, row, 0, color))
+                requests_format.append(_format_table_cell(table_id, row, 1, color))
+                requests_format.append(_format_table_cell(table_id, row, 2, color))
+
+        # 🔹 Ejecutar batchUpdate para insertar texto
         slides_service.presentations().batchUpdate(
             presentationId=presentation_id,
-            body={"requests": requests}
+            body={"requests": requests_text}
         ).execute()
+
+        # 🔹 Ejecutar batchUpdate para aplicar formatos
+        slides_service.presentations().batchUpdate(
+            presentationId=presentation_id,
+            body={"requests": requests_format}
+        ).execute()
+
         print("✅ Presentación generada con éxito.")
 
     except Exception as e:
         print(f"❌ ERROR al generar la presentación: {str(e)}")
         return None
 
-    # 🔹 Hacer la presentación pública y editable
+    # 🔹 Configurar permisos de edición
     set_permissions(presentation_id)
 
     return f"https://docs.google.com/presentation/d/{presentation_id}"
@@ -162,7 +174,7 @@ def set_permissions(file_id):
     try:
         drive_service.permissions().create(
             fileId=file_id,
-            body={"type": "anyone", "role": "writer"}  # Permite edición
+            body={"type": "anyone", "role": "writer"}
         ).execute()
         print(f"✅ Permisos públicos agregados para el archivo {file_id}")
     except Exception as e:
@@ -177,16 +189,24 @@ def _hex_to_rgb(hex_color):
     return {"red": int(hex_color[0:2], 16) / 255, "green": int(hex_color[2:4], 16) / 255, "blue": int(hex_color[4:6], 16) / 255}
 
 
-def _format_table_cell(table_id, row, col, text, background_color):
+def _insert_table_text(table_id, row, col, text):
     """
-    Genera una solicitud de API para insertar texto y cambiar el fondo de una celda de tabla.
+    Inserta texto en una celda de tabla.
     """
     return {
         "insertText": {
             "objectId": table_id,
             "cellLocation": {"rowIndex": row, "columnIndex": col},
             "text": text
-        },
+        }
+    }
+
+
+def _format_table_cell(table_id, row, col, background_color):
+    """
+    Aplica color de fondo a una celda de tabla.
+    """
+    return {
         "updateTableCellProperties": {
             "objectId": table_id,
             "tableRange": {
