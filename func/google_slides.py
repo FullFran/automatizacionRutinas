@@ -1,10 +1,12 @@
 import os
+import time
 import json
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 
 # 🔹 Configuración de credenciales
-SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/presentations"]
+SCOPES = ["https://www.googleapis.com/auth/drive",
+          "https://www.googleapis.com/auth/presentations"]
 
 # Cargar credenciales desde la variable de entorno
 credentials_json = os.getenv("GOOGLE_CREDENTIALS")
@@ -12,22 +14,26 @@ credentials_json = os.getenv("GOOGLE_CREDENTIALS")
 if not credentials_json:
     raise ValueError("⚠ ERROR: No se encontraron las credenciales de Google en las variables de entorno.")
 
-credentials_info = json.loads(credentials_json)
-credentials = service_account.Credentials.from_service_account_info(credentials_info)
-slides_service = build("slides", "v1", credentials=credentials)
-drive_service = build("drive", "v3", credentials=credentials)
+try:
+    print("🔍 Cargando credenciales desde GOOGLE_CREDENTIALS...")
+    credentials_info = json.loads(credentials_json)
+    credentials = service_account.Credentials.from_service_account_info(credentials_info)
+    slides_service = build("slides", "v1", credentials=credentials)
+    drive_service = build("drive", "v3", credentials=credentials)
+    print("✅ Credenciales cargadas con éxito.")
+except json.JSONDecodeError as e:
+    raise ValueError(f"❌ ERROR: No se pudo decodificar el JSON de credenciales. {str(e)}")
+except Exception as e:
+    raise ValueError(f"❌ ERROR en la autenticación con Google: {str(e)}")
 
-# 🔹 ID de la plantilla de presentación y layout de rutinas
+# 🔹 ID de la plantilla de presentación
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
-ROUTINE_LAYOUT_ID = os.getenv("ROUTINE_LAYOUT_ID")
-
-if not TEMPLATE_PRESENTATION_ID:
-    raise ValueError("⚠ ERROR: No se encontró TEMPLATE_PRESENTATION_ID en las variables de entorno.")
-
-if not ROUTINE_LAYOUT_ID:
-    raise ValueError("⚠ ERROR: No se encontró ROUTINE_LAYOUT_ID en las variables de entorno.")
+ROUTINE_LAYOUT_ID = os.getenv("ROUTINE_LAYOUT_ID")  # ID del layout específico para rutinas
 
 def create_presentation(routine_data):
+    """
+    Crea una presentación en Google Slides basada en una plantilla, agregando texto y tablas sin placeholders.
+    """
     print("🚀 Creando una nueva presentación desde la plantilla...")
 
     # Copiar la plantilla en una nueva presentación
@@ -43,7 +49,7 @@ def create_presentation(routine_data):
     slides = presentation.get('slides', [])
     num_existing_slides = len(slides)
 
-    # 🔹 Crear diapositivas para cada rutina usando el layout predefinido
+    # 🔹 Crear diapositivas para cada rutina sin usar placeholders
     requests = []
     for i, rutina in enumerate(routine_data):
         slide_id = f"slide_{i + num_existing_slides}"
@@ -53,104 +59,134 @@ def create_presentation(routine_data):
             "createSlide": {
                 "objectId": slide_id,
                 "insertionIndex": str(i + num_existing_slides),
-                "slideLayoutReference": {"layoutId": ROUTINE_LAYOUT_ID}
+                "slideLayoutReference": {
+                    "layoutId": ROUTINE_LAYOUT_ID  # Usamos el layout específico para rutinas
+                }
             }
         })
 
-    # 🔹 Enviar la solicitud de creación de diapositivas
-    slides_service.presentations().batchUpdate(
-        presentationId=presentation_id,
-        body={"requests": requests}
-    ).execute()
+        # 🔹 Crear título manualmente como TEXT_BOX
+        title_id = f"title_{i}"
+        requests.append({
+            "createShape": {
+                "objectId": title_id,
+                "shapeType": "TEXT_BOX",
+                "elementProperties": {
+                    "pageObjectId": slide_id,
+                    "size": {
+                        "height": {"magnitude": 50, "unit": "PT"},
+                        "width": {"magnitude": 600, "unit": "PT"}
+                    },
+                    "transform": {
+                        "scaleX": 1, "scaleY": 1, "translateX": 100, "translateY": 50, "unit": "PT"
+                    }
+                }
+            }
+        })
 
-    # 🔹 Obtener las diapositivas creadas para identificar sus placeholders
-    presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
-    slides = presentation.get('slides', [])
-
-    # 🔹 Insertar el contenido dentro de los placeholders existentes
-    requests = []
-    for i, rutina in enumerate(routine_data):
-        slide = slides[num_existing_slides + i]  # Obtener la diapositiva recién creada
-        elements = {element['objectId']: element for element in slide.get('pageElements', [])}
-
-        print(f"🔹 Analizando elementos de la diapositiva {i+1}...")
-        for element_id, element in elements.items():
-            print(f"  - Elemento encontrado: ID {element_id}, Tipo: {element.get('shape', {}).get('shapeType', 'Unknown')}")
-
-        # Buscar placeholders específicos en el layout
-        title_placeholder = next((k for k, v in elements.items() if 'TITLE' in v.get('shape', {}).get('text', {})), None)
-        content_placeholder = next((k for k, v in elements.items() if 'BODY' in v.get('shape', {}).get('text', {})), None)
-
-        if not title_placeholder or not content_placeholder:
-            print(f"⚠ Advertencia: No se encontraron placeholders en la diapositiva {i+1}.")
-            continue
-
-        # Insertar título en el placeholder correcto
+        # Insertar el texto del título
         requests.append({
             "insertText": {
-                "objectId": title_placeholder,
+                "objectId": title_id,
                 "text": f"Rutina {i + 1}"
             }
         })
 
-        # 🔹 Insertar tabla de ejercicios en el placeholder correcto
+        # 🔹 Insertar tabla
         num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
+        table_id = f"table_{i}"
+
         requests.append({
             "createTable": {
-                "objectId": content_placeholder,
+                "objectId": table_id,
                 "rows": num_rows,
                 "columns": num_cols,
                 "elementProperties": {
-                    "pageObjectId": slide['objectId']
+                    "pageObjectId": slide_id
                 }
             }
         })
 
-        # Insertar títulos de las columnas
+        # 🔹 Insertar títulos de las columnas con texto blanco y negrita
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, text in enumerate(headers):
             requests.append({
                 "insertText": {
-                    "objectId": content_placeholder,
+                    "objectId": table_id,
                     "cellLocation": {"rowIndex": 0, "columnIndex": col},
                     "text": text
                 }
             })
+            requests.append({
+                "updateTextStyle": {
+                    "objectId": table_id,
+                    "cellLocation": {"rowIndex": 0, "columnIndex": col},
+                    "style": {
+                        "bold": True,
+                        "foregroundColor": {
+                            "opaqueColor": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}  # Blanco
+                        }
+                    },
+                    "fields": "bold,foregroundColor"
+                }
+            })
 
-        # Insertar datos en la tabla
+        # 🔹 Insertar datos en la tabla con formato
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests.append({
                 "insertText": {
-                    "objectId": content_placeholder,
+                    "objectId": table_id,
                     "cellLocation": {"rowIndex": row, "columnIndex": 0},
                     "text": exercise["ejercicio"]
                 }
             })
             requests.append({
                 "insertText": {
-                    "objectId": content_placeholder,
+                    "objectId": table_id,
                     "cellLocation": {"rowIndex": row, "columnIndex": 1},
                     "text": exercise["series"]
                 }
             })
             requests.append({
                 "insertText": {
-                    "objectId": content_placeholder,
+                    "objectId": table_id,
                     "cellLocation": {"rowIndex": row, "columnIndex": 2},
                     "text": ", ".join(exercise["repeticiones"])
                 }
             })
 
+            # Aplicar color de fondo alterno a las filas de la tabla
+            row_color = {"red": 0.1, "green": 0.2, "blue": 0.5} if row % 2 == 0 else {"red": 0.2, "green": 0.4, "blue": 0.8}
+
+            requests.append({
+                "updateTableCellProperties": {
+                    "objectId": table_id,
+                    "tableRange": {
+                        "location": {"rowIndex": row, "columnIndex": 0},
+                        "rowSpan": 1,
+                        "columnSpan": num_cols
+                    },
+                    "tableCellProperties": {
+                        "tableCellBackgroundFill": {
+                            "solidFill": {
+                                "color": {"rgbColor": row_color}
+                            }
+                        }
+                    },
+                    "fields": "tableCellBackgroundFill.solidFill.color"
+                }
+            })
+
     # 🔹 Enviar todas las solicitudes a la API
-    if requests:
+    try:
         slides_service.presentations().batchUpdate(
             presentationId=presentation_id,
             body={"requests": requests}
         ).execute()
         print("✅ Presentación generada exitosamente.")
-    else:
-        print("❌ ERROR: No se encontraron placeholders válidos en ninguna diapositiva.")
+    except Exception as e:
+        print(f"❌ ERROR al generar la presentación: {e}")
         return None
 
     # 🔹 Hacer la presentación pública y editable
