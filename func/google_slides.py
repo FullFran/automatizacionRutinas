@@ -8,7 +8,6 @@ from google.oauth2 import service_account
 SCOPES = ["https://www.googleapis.com/auth/drive",
           "https://www.googleapis.com/auth/presentations"]
 
-# 🔹 Cargar credenciales desde la variable de entorno
 credentials_json = os.getenv("GOOGLE_CREDENTIALS")
 
 if not credentials_json:
@@ -63,15 +62,22 @@ def create_presentation(routine_data):
     requests_format = []
 
     try:
+        # 🔹 Obtener las diapositivas actuales en la presentación
+        presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
+        slides = presentation.get("slides", [])
+
         for i, rutina in enumerate(routine_data):
-            slide_id = f"slide_{i}"
+            # ✅ Usar el ID real de la diapositiva creada
+            if i < len(slides):
+                slide_id = slides[i]["objectId"]
+            else:
+                print(f"❌ ERROR: No hay suficiente diapositivas creadas para la rutina {i + 1}.")
+                continue  # Evita intentar modificar una diapositiva inexistente
+
             title_id = f"title_{i}"
             table_id = f"table_{i}"
 
-            # 🔹 Crear una nueva diapositiva basada en una plantilla
-            requests_text.append({"createSlide": {}})
-
-            # 🔹 Cambiar fondo a negro (se usa "pageBackgroundFill" dentro de updatePageProperties correctamente)
+            # 🔹 Cambiar fondo a negro
             requests_text.append({
                 "updatePageProperties": {
                     "objectId": slide_id,
@@ -168,32 +174,12 @@ def create_presentation(routine_data):
     return f"https://docs.google.com/presentation/d/{presentation_id}"
 
 
-def set_permissions(file_id):
-    """
-    Da permisos de edición a cualquier persona con el enlace en Google Drive.
-    """
-    try:
-        drive_service.permissions().create(
-            fileId=file_id,
-            body={"type": "anyone", "role": "writer"}
-        ).execute()
-        print(f"✅ Permisos públicos agregados para el archivo {file_id}")
-    except Exception as e:
-        print(f"❌ ERROR al configurar permisos: {str(e)}")
-
-
 def _hex_to_rgb(hex_color):
-    """
-    Convierte un color HEX a formato RGB para la API de Google Slides.
-    """
     hex_color = hex_color.lstrip("#")
     return {"red": int(hex_color[0:2], 16) / 255, "green": int(hex_color[2:4], 16) / 255, "blue": int(hex_color[4:6], 16) / 255}
 
 
 def _insert_table_text(table_id, row, col, text):
-    """
-    Inserta texto en una celda de tabla.
-    """
     return {
         "insertText": {
             "objectId": table_id,
@@ -204,9 +190,6 @@ def _insert_table_text(table_id, row, col, text):
 
 
 def _format_table_cell(table_id, row, col, background_color):
-    """
-    Aplica color de fondo a una celda de tabla.
-    """
     return {
         "updateTableCellProperties": {
             "objectId": table_id,
