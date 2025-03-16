@@ -128,6 +128,8 @@ def create_presentation(routine_data):
     default_table_height = 250       # Alto total de la tabla
 
     requests = []
+    headers = ["Ejercicio", "Series", "Repeticiones"]
+
     for i, rutina in enumerate(routine_data):
         slide_id = f"slide_{i + num_existing_slides}"
         title_id = f"title_{i}"
@@ -213,15 +215,29 @@ def create_presentation(routine_data):
         })
 
         # Insertar encabezados de la tabla
-        headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, header_text in enumerate(headers):
             requests.append(_insert_table_text(table_id, 0, col, header_text))
 
-        # Insertar datos en la tabla y aplicar colores alternos a cada celda
+        # Insertar datos en la tabla
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests.append(_insert_table_text(table_id, row, 0, exercise["ejercicio"]))
             requests.append(_insert_table_text(table_id, row, 1, exercise["series"]))
             requests.append(_insert_table_text(table_id, row, 2, ", ".join(exercise["repeticiones"])))
+
+        # Ajustar el ancho de la columna 'Series' (segunda columna, índice 1)
+        requests.append({
+            "updateTableColumnProperties": {
+                "objectId": table_id,
+                "columnIndices": [1],  # Índice de la columna 'Series'
+                "tableColumnProperties": {
+                    "width": {
+                        "magnitude": 50,  # Ajusta este valor según necesites
+                        "unit": "PT"
+                    }
+                },
+                "fields": "width"
+            }
+        })
 
     # Enviar todas las solicitudes en un solo batchUpdate
     slides_service.presentations().batchUpdate(
@@ -231,3 +247,24 @@ def create_presentation(routine_data):
     
     set_permissions(presentation_id)
     return f"https://docs.google.com/presentation/d/{presentation_id}"
+
+# Ejemplo de uso:
+if __name__ == "__main__":
+    # Datos de ejemplo para la rutina
+    routine_data = [
+        {
+            "rutina": [
+                {"ejercicio": "Push-ups", "series": "3", "repeticiones": ["10", "12", "15"]},
+                {"ejercicio": "Squats", "series": "4", "repeticiones": ["15", "20", "25"]}
+            ]
+        },
+        {
+            "rutina": [
+                {"ejercicio": "Pull-ups", "series": "3", "repeticiones": ["5", "7", "10"]},
+                {"ejercicio": "Lunges", "series": "4", "repeticiones": ["12", "12", "12"]}
+            ]
+        }
+    ]
+    
+    presentation_link = create_presentation(routine_data)
+    print("Accede a la presentación en:", presentation_link)
