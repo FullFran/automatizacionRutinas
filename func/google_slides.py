@@ -1,16 +1,35 @@
 import time
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
+import json
+
 
 # 🔹 Configuración de credenciales
 SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/presentations"]
 SERVICE_ACCOUNT_FILE = "credenciales.json"  # Asegúrate de que este archivo es correcto
 
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES
-)
+import os
+import json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+# 🔹 Cargar credenciales desde la variable de entorno
+credentials_json = os.getenv("GOOGLE_CREDENTIALS")
+if not credentials_json:
+    raise ValueError("No se encontraron las credenciales de Google en las variables de entorno.")
+
+credentials_info = json.loads(credentials_json)
+credentials = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+
 slides_service = build("slides", "v1", credentials=credentials)
 drive_service = build("drive", "v3", credentials=credentials)
+
+
+#credentials = service_account.Credentials.from_service_account_file(
+#    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+#)
+#slides_service = build("slides", "v1", credentials=credentials)
+#drive_service = build("drive", "v3", credentials=credentials)
 
 # 🔹 ID de la plantilla de presentación
 TEMPLATE_PRESENTATION_ID = "1D4IDgelJUvbQQdkc3tF-K9k11THf7Au_ZYmuRYvxExM"  # Cambia esto por el ID correcto
