@@ -54,6 +54,15 @@ def parse_routine(text: str) -> List[Dict[str, List[dict]]]:
                 {{"ejercicio": "Pull ups", "series": "4", "repeticiones": ["3", "4", "5", "6"]}},
                 {{"ejercicio": "Front touch", "series": "3", "repeticiones": ["3seg", "4 pull ups"]}}
             ]
+
+            Notas:
+            - Normalmente tras un ejercicio y sus series y repeticiones hay un salto de línea.
+            - Por ejemplo esto son 5 ejercicios: 
+               "front a 3touch, front a 4touch, front a 5touch, front a 6touch 4series 
+                Front 2pull + touch, 3pull + touch, 4pull + touch, 5pull+ touch 4series de 
+                Touch + pull + touch suma, las reps de pull suman desde 2,3,4,5 
+                2pull completas + touch sube reps de pull en 1, 3series 
+                Front touch 3seg, 5seg, 8seg, 10seg, negativa de front completa 4series"
             """
 
         response = llm.invoke([
