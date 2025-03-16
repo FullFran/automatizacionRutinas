@@ -13,7 +13,7 @@ SERVICE_ACCOUNT_FILE = "credenciales.json"
 
 
 # 🔹 Cargar credenciales desde la variable de entorno
-credentials_json = os.getenv("GCP_CREDENTIALS")
+credentials_json = os.getenv("GOOGLE_CREDENTIALS")
 
 if not credentials_json:
     raise ValueError(
