@@ -2,54 +2,64 @@ from fastapi import FastAPI, Request, HTTPException
 from func.routine_parser import parse_routine
 from func.google_slides import create_presentation
 from func.telegram_bot import send_telegram_message, set_webhook
+from func.telegram_bot import send_telegram_message, set_webhook, send_telegram_message_with_inline_keyboard
 
 app = FastAPI()
 
-# Diccionario temporal para almacenar la rutina antes de la confirmación
+# Diccionario para almacenar las rutinas pendientes de confirmación
 pending_routines = {}
 
 @app.post("/webhook")
 async def telegram_webhook(request: Request):
     try:
         data = await request.json()
-        chat_id = data["message"]["chat"]["id"]
-        text = data["message"]["text"]
 
-        # Si el usuario aún no ha confirmado y envía una rutina
-        if chat_id not in pending_routines:
-            send_telegram_message(chat_id, "Procesando tu rutina...")
-            structured_routine = parse_routine(text)  # Convierte la rutina
-            pending_routines[chat_id] = structured_routine  # Almacena la rutina temporalmente
-            send_telegram_message(chat_id, "Rutina procesada correctamente.")
-            
-            # Enviar mensaje de confirmación con botones
-            send_telegram_message(chat_id, "¿Quieres generar la presentación?", reply_markup={
-                "keyboard": [["Sí"], ["No"]],
-                "one_time_keyboard": True,
-                "resize_keyboard": True
-            })
-            return {"status": "waiting_for_confirmation"}
+        if 'callback_query' in data:
+            # Manejo de la respuesta del botón en línea
+            callback_query = data['callback_query']
+            chat_id = callback_query['message']['chat']['id']
+            message_id = callback_query['message']['message_id']
+            callback_data = callback_query['data']
 
-        # Si el usuario responde "No", cancelamos la operación
-        if text.lower() in ["no"]:
-            send_telegram_message(chat_id, "Entendido, no se procesará la rutina.")
-            pending_routines.pop(chat_id, None)  # Eliminar rutina temporal
-            return {"status": "cancelled"}
+            if callback_data == 'confirm':
+                if chat_id in pending_routines:
+                    structured_routine = pending_routines.pop(chat_id)
+                    send_telegram_message(chat_id, "Creando presentación, esto podría tardar unos minutos...")
+                    presentation_link = create_presentation(structured_routine)
+                    send_telegram_message(chat_id, f"Tu rutina ha sido procesada. Aquí tienes la presentación: {presentation_link}")
+                else:
+                    send_telegram_message(chat_id, "No hay ninguna rutina pendiente para procesar.")
+            elif callback_data == 'cancel':
+                pending_routines.pop(chat_id, None)
+                send_telegram_message(chat_id, "Entendido, no se procesará la rutina.")
 
-        # Si el usuario responde "Sí", generamos la presentación
-        if text.lower() in ["sí", "si"]:
-            send_telegram_message(chat_id, "Creando presentación, esto podría tardar unos minutos...")
-            structured_routine = pending_routines.pop(chat_id, None)  # Recupera la rutina almacenada
-
-            if not structured_routine:
-                send_telegram_message(chat_id, "No hay ninguna rutina pendiente para procesar.")
-                return {"status": "error", "message": "No pending routine"}
-
-            presentation_link = create_presentation(structured_routine)
-            send_telegram_message(chat_id, f"Tu rutina ha sido procesada. Aquí tienes la presentación: {presentation_link}")
             return {"status": "ok"}
 
-        return {"status": "invalid_input"}
+        elif 'message' in data:
+            # Manejo de mensajes entrantes
+            message = data['message']
+            chat_id = message['chat']['id']
+            text = message.get('text', '')
+
+            if chat_id not in pending_routines:
+                send_telegram_message(chat_id, "Procesando tu rutina...")
+                structured_routine = parse_routine(text)
+                pending_routines[chat_id] = structured_routine
+                send_telegram_message(chat_id, "Rutina procesada correctamente.")
+                
+                # Enviar mensaje de confirmación con botones en línea
+                send_telegram_message_with_inline_keyboard(
+                    chat_id,
+                    "¿Quieres generar la presentación?",
+                    inline_keyboard=[
+                        [{"text": "Sí", "callback_data": "confirm"}],
+                        [{"text": "No", "callback_data": "cancel"}]
+                    ]
+                )
+            else:
+                send_telegram_message(chat_id, "Ya tienes una rutina pendiente de confirmación. Por favor, responde 'Sí' o 'No'.")
+
+            return {"status": "waiting_for_confirmation"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
