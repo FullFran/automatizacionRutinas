@@ -59,6 +59,8 @@ def create_presentation(routine_data):
     requests = []
     for i, rutina in enumerate(routine_data):
         slide_id = f"slide_{i + num_existing_slides}"
+        title_id = f"title_{i}"
+        table_id = f"table_{i}"
 
         # Crear una nueva diapositiva con el layout personalizado
         requests.append({
@@ -71,10 +73,21 @@ def create_presentation(routine_data):
             }
         })
 
-        # 🔹 Insertar la tabla en la diapositiva
+        # 🔹 Insertar título con "Día 1", "Día 2", etc.
+        requests.append({
+            "insertText": {
+                "objectId": slide_id,  # El layout debería contener un placeholder para el título
+                "text": f"Día {i + 1}"
+            }
+        })
+
+        # 🔹 Insertar la tabla centrada y con tamaño ajustable
         num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
-        table_id = f"table_{i}"
+
+        # Dimensiones de la tabla (ajustamos para que no se desborde)
+        table_width = 400
+        table_height = min(200 + (num_rows * 20), 350)  # Ajusta el alto según la cantidad de filas
 
         requests.append({
             "createTable": {
@@ -82,7 +95,17 @@ def create_presentation(routine_data):
                 "rows": num_rows,
                 "columns": num_cols,
                 "elementProperties": {
-                    "pageObjectId": slide_id
+                    "pageObjectId": slide_id,
+                    "size": {
+                        "width": {"magnitude": table_width, "unit": "PT"},
+                        "height": {"magnitude": table_height, "unit": "PT"}
+                    },
+                    "transform": {
+                        "scaleX": 1, "scaleY": 1,
+                        "translateX": 100,  # Centramos la tabla
+                        "translateY": 150,  # Espacio suficiente debajo del título
+                        "unit": "PT"
+                    }
                 }
             }
         })
@@ -188,3 +211,4 @@ def set_permissions(file_id):
         body=permission
     ).execute()
     print("✅ Permisos de edición configurados.")
+
