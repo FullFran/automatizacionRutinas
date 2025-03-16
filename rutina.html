@@ -1,0 +1,328 @@
+
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rutina de Entrenamiento</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f5f5f5;
+                color: #333;
+                text-align: center;
+                margin: 0;
+                padding: 0;
+            }
+            .slide {
+                width: 80%;
+                margin: 50px auto;
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+                display: none;
+            }
+            h1 {
+                color: #0056b3;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+            th, td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: left;
+            }
+            th {
+                background-color: #0056b3;
+                color: white;
+            }
+            .controls {
+                margin-top: 20px;
+            }
+            button {
+                padding: 10px 20px;
+                font-size: 16px;
+                border: none;
+                cursor: pointer;
+                margin: 5px;
+            }
+            .prev { background-color: #666; color: white; }
+            .next { background-color: #0056b3; color: white; }
+        </style>
+    </head>
+    <body>
+        <h1>Rutina de Entrenamiento</h1>
+    
+        <div class="slide" id="slide-0">
+            <h2>Rutina 1</h2>
+            <table>
+                <tr>
+                    <th>Ejercicio</th>
+                    <th>Series</th>
+                    <th>Repeticiones</th>
+                </tr>
+        
+            <tr>
+                <td>Front a touch</td>
+                <td>5</td>
+                <td>4seg, 6seg, 8seg, 10seg, 10seg</td>
+            </tr>
+            
+            <tr>
+                <td>Front a 2touch3seg</td>
+                <td>4</td>
+                <td>3touch2seg, 3touch2seg, 4touch2seg</td>
+            </tr>
+            
+            <tr>
+                <td>Pull ups completas</td>
+                <td>4</td>
+                <td>3, 4, 5, 6</td>
+            </tr>
+            
+            <tr>
+                <td>Pull ups completas 3seg</td>
+                <td>3</td>
+                <td>2pull, 3pull, 4pull</td>
+            </tr>
+            
+            <tr>
+                <td>Front touch 3seg + 4 pull ups completo</td>
+                <td>3</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Touch press touch</td>
+                <td>3</td>
+                <td>2, 3, 4</td>
+            </tr>
+            
+            <tr>
+                <td>Front a touch + press</td>
+                <td>1</td>
+                <td>3</td>
+            </tr>
+            </table></div>
+        <div class="slide" id="slide-1">
+            <h2>Rutina 2</h2>
+            <table>
+                <tr>
+                    <th>Ejercicio</th>
+                    <th>Series</th>
+                    <th>Repeticiones</th>
+                </tr>
+        
+            <tr>
+                <td>Front a 3touch, front a 4touch, front a 5touch, front a 6touch</td>
+                <td>4</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Front 2pull + touch, 3pull + touch, 4pull + touch, 5pull+ touch</td>
+                <td>4</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Touch + pull + touch</td>
+                <td>1</td>
+                <td>2, 3, 4, 5</td>
+            </tr>
+            
+            <tr>
+                <td>2pull completas + touch</td>
+                <td>3</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Front touch 3seg, 5seg, 8seg, 10seg, negativa de front completa</td>
+                <td>4</td>
+                <td>N/A</td>
+            </tr>
+            </table></div>
+        <div class="slide" id="slide-2">
+            <h2>Rutina 3</h2>
+            <table>
+                <tr>
+                    <th>Ejercicio</th>
+                    <th>Series</th>
+                    <th>Repeticiones</th>
+                </tr>
+        
+            <tr>
+                <td>Pull ups + touch</td>
+                <td>3</td>
+                <td>9</td>
+            </tr>
+            
+            <tr>
+                <td>Pull ups + touch + press</td>
+                <td>3</td>
+                <td>4</td>
+            </tr>
+            
+            <tr>
+                <td>Pull a touch</td>
+                <td>3</td>
+                <td>3, 4, 5</td>
+            </tr>
+            
+            <tr>
+                <td>Negativa de SAT con goma</td>
+                <td>3</td>
+                <td>6seg</td>
+            </tr>
+            
+            <tr>
+                <td>Pull ups de SAT con goma</td>
+                <td>3</td>
+                <td>3reps</td>
+            </tr>
+            
+            <tr>
+                <td>SAT 3seg + 2 pull + touch, suma pull</td>
+                <td>3</td>
+                <td>N/A</td>
+            </tr>
+            </table></div>
+        <div class="slide" id="slide-3">
+            <h2>Rutina 4</h2>
+            <table>
+                <tr>
+                    <th>Ejercicio</th>
+                    <th>Series</th>
+                    <th>Repeticiones</th>
+                </tr>
+        
+            <tr>
+                <td>wrap around rows</td>
+                <td>1</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>CABLE ANGLED SHRUGS</td>
+                <td>1</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>trap bar SHRUGS</td>
+                <td>1</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>facepulls oh ext</td>
+                <td>1</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>hip huggers</td>
+                <td>1</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>dumbell shrugs</td>
+                <td>1</td>
+                <td>N/A</td>
+            </tr>
+            </table></div>
+        <div class="slide" id="slide-4">
+            <h2>Rutina 5</h2>
+            <table>
+                <tr>
+                    <th>Ejercicio</th>
+                    <th>Series</th>
+                    <th>Repeticiones</th>
+                </tr>
+        
+            <tr>
+                <td>wide front max hold</td>
+                <td>2</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Wide front touch</td>
+                <td>3</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Wide front pull ups</td>
+                <td>3</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Negativa a SAT con goma e ir reduciendola</td>
+                <td>5</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>Pull ups SAT con goma</td>
+                <td>4</td>
+                <td>N/A</td>
+            </tr>
+            
+            <tr>
+                <td>hip huggers dumbell</td>
+                <td>4</td>
+                <td>10</td>
+            </tr>
+            
+            <tr>
+                <td>dumbell shrugs</td>
+                <td>4</td>
+                <td>10</td>
+            </tr>
+            
+            <tr>
+                <td>cable angled shrugs</td>
+                <td>4</td>
+                <td>10</td>
+            </tr>
+            
+            <tr>
+                <td>wrap around rows</td>
+                <td>4</td>
+                <td>10</td>
+            </tr>
+            </table></div>
+    <div class="controls">
+        <button class="prev" onclick="changeSlide(-1)">Anterior</button>
+        <button class="next" onclick="changeSlide(1)">Siguiente</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll(".slide");
+
+        function showSlide(index) {
+            slides.forEach(slide => slide.style.display = "none");
+            slides[index].style.display = "block";
+        }
+
+        function changeSlide(direction) {
+            currentSlide += direction;
+            if (currentSlide >= slides.length) currentSlide = 0;
+            if (currentSlide < 0) currentSlide = slides.length - 1;
+            showSlide(currentSlide);
+        }
+
+        showSlide(currentSlide);
+    </script>
+    </body>
+    </html>
+    
