@@ -66,13 +66,18 @@ def create_presentation(routine_data):
         presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
         slides = presentation.get("slides", [])
 
+        # 🔹 Verificar si hay suficientes diapositivas, si no, crearlas
+        while len(slides) < len(routine_data):
+            slides_service.presentations().batchUpdate(
+                presentationId=presentation_id,
+                body={"requests": [{"createSlide": {}}]}
+            ).execute()
+            time.sleep(1)  # Evitar exceder límites de la API
+            slides = slides_service.presentations().get(presentationId=presentation_id).execute().get("slides", [])
+
         for i, rutina in enumerate(routine_data):
             # ✅ Usar el ID real de la diapositiva creada
-            if i < len(slides):
-                slide_id = slides[i]["objectId"]
-            else:
-                print(f"❌ ERROR: No hay suficiente diapositivas creadas para la rutina {i + 1}.")
-                continue  # Evita intentar modificar una diapositiva inexistente
+            slide_id = slides[i]["objectId"]
 
             title_id = f"title_{i}"
             table_id = f"table_{i}"
@@ -199,11 +204,11 @@ def _format_table_cell(table_id, row, col, background_color):
                 "columnSpan": 1
             },
             "tableCellProperties": {
-                "backgroundFill": {
+                "tableCellBackgroundFill": {  # 🔹 Corrección aquí
                     "solidFill": {"color": {"rgbColor": _hex_to_rgb(background_color)}}
                 }
             },
-            "fields": "tableCellProperties.backgroundFill.solidFill.color"
+            "fields": "tableCellProperties.tableCellBackgroundFill.solidFill.color"
         }
     }
 
