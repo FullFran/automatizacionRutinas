@@ -42,7 +42,6 @@ def create_presentation(routine_data):
     """
     print("🚀 Creando una nueva presentación desde la plantilla...")
 
-    # 🔹 Copiar la plantilla en una nueva presentación
     try:
         copy = drive_service.files().copy(
             fileId=TEMPLATE_PRESENTATION_ID,
@@ -69,19 +68,21 @@ def create_presentation(routine_data):
             title_id = f"title_{i}"
             table_id = f"table_{i}"
 
-            # 🔹 Crear una nueva diapositiva
-            requests_text.append({"createSlide": {"objectId": slide_id}})
+            # 🔹 Crear una nueva diapositiva basada en una plantilla
+            requests_text.append({"createSlide": {}})
 
-            # 🔹 Establecer fondo negro
+            # 🔹 Cambiar fondo a negro (se usa "pageBackgroundFill" dentro de updatePageProperties correctamente)
             requests_text.append({
                 "updatePageProperties": {
                     "objectId": slide_id,
                     "pageProperties": {
                         "pageBackgroundFill": {
-                            "solidFill": {"color": {"rgbColor": _hex_to_rgb("#000000")}}
+                            "solidFill": {
+                                "color": {"rgbColor": _hex_to_rgb("#000000")}
+                            }
                         }
                     },
-                    "fields": "pageProperties.pageBackgroundFill.solidFill.color"
+                    "fields": "pageBackgroundFill.solidFill.color"
                 }
             })
 
@@ -143,7 +144,7 @@ def create_presentation(routine_data):
                 requests_format.append(_format_table_cell(table_id, row, 1, color))
                 requests_format.append(_format_table_cell(table_id, row, 2, color))
 
-        # 🔹 Ejecutar batchUpdate para insertar texto
+        # 🔹 Ejecutar batchUpdate para insertar texto y estructura
         slides_service.presentations().batchUpdate(
             presentationId=presentation_id,
             body={"requests": requests_text}
