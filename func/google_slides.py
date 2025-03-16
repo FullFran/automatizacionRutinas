@@ -26,9 +26,15 @@ except json.JSONDecodeError as e:
 except Exception as e:
     raise ValueError(f"❌ ERROR en la autenticación con Google: {str(e)}")
 
-# 🔹 ID de la plantilla de presentación
+# 🔹 ID de la plantilla de presentación y layout de rutinas
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
 ROUTINE_LAYOUT_ID = os.getenv("ROUTINE_LAYOUT_ID")  # ID del layout específico para rutinas
+
+if not TEMPLATE_PRESENTATION_ID:
+    raise ValueError("⚠ ERROR: No se encontró TEMPLATE_PRESENTATION_ID en las variables de entorno.")
+
+if not ROUTINE_LAYOUT_ID:
+    raise ValueError("⚠ ERROR: No se encontró ROUTINE_LAYOUT_ID en las variables de entorno.")
 
 def create_presentation(routine_data):
     """
@@ -52,7 +58,7 @@ def create_presentation(routine_data):
     # 🔹 Crear diapositivas para cada rutina usando el layout predefinido
     requests = []
     for i, rutina in enumerate(routine_data):
-        slide_id = f"slide_{i + num_existing_slides}"  # Evitamos sobrescribir IDs existentes
+        slide_id = f"slide_{i + num_existing_slides}"
 
         # Crear una nueva diapositiva con el layout personalizado
         requests.append({
@@ -60,7 +66,7 @@ def create_presentation(routine_data):
                 "objectId": slide_id,
                 "insertionIndex": str(i + num_existing_slides),
                 "slideLayoutReference": {
-                    "objectId": ROUTINE_LAYOUT_ID  # Usamos el layout específico para rutinas
+                    "layoutId": ROUTINE_LAYOUT_ID  # Usamos el layout específico para rutinas
                 }
             }
         })
