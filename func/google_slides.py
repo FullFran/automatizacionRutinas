@@ -120,7 +120,7 @@ def create_presentation(routine_data):
                     "style": {
                         "bold": True,
                         "foregroundColor": {
-                            "opaqueColor": {"rgbColor": {"red": 1.0, "green": 1.0, "blue": 1.0}}  # Blanco
+                            "opaqueColor": {"rgbColor": {"red": 0.0, "green": 0.0, "blue": 0.0}}  # Color del texto encabezado
                         }
                     },
                     "fields": "bold,foregroundColor"
@@ -152,7 +152,7 @@ def create_presentation(routine_data):
             })
 
             # Aplicar color de fondo alterno en las filas
-            background_color = "#333333" if row % 2 == 0 else "#444444"
+            background_color = "#111111" if row % 2 == 0 else "#333333" # alterna entre dos tonos de gris
             requests.append({
                 "updateTableCellProperties": {
                     "objectId": table_id,
