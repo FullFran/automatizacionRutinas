@@ -99,15 +99,15 @@ def set_permissions(file_id):
 # -------------------------
 def create_presentation(routine_data):
     """
-    Crea una presentación en Google Slides basada en una plantilla, aplicando estilos profesionales.
-      - El título se coloca en la esquina superior izquierda, casi pegado al borde.
-      - Se inserta el título como "Día X" con fondo azul, texto blanco y centrado.
-      - La tabla se posiciona de forma dinámica y centrada horizontalmente.
+    Crea una presentación en Google Slides basada en una plantilla, aplicando estilos profesionales:
+      - Título en la esquina superior izquierda, casi pegado al borde.
+      - El título se muestra como "Día X" con fondo azul, texto blanco y centrado.
+      - La tabla se posiciona dinámicamente, centrada horizontalmente y ajustada en tamaño.
       - La columna "Series" se ajusta a un ancho fijo (60 PT en este ejemplo).
     """
     print("🚀 Creando una nueva presentación desde la plantilla...")
 
-    # Copiar la plantilla en una nueva presentación
+    # Copiar la plantilla
     copy = drive_service.files().copy(
         fileId=TEMPLATE_PRESENTATION_ID,
         body={"name": "Rutina de Entrenamiento Generada"}
@@ -115,17 +115,16 @@ def create_presentation(routine_data):
     presentation_id = copy["id"]
     print(f"✅ Presentación creada: {presentation_id}")
 
-    # Obtener las diapositivas existentes
+    # Obtener diapositivas existentes
     presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
-    slides = presentation.get('slides', [])
+    slides = presentation.get("slides", [])
     num_existing_slides = len(slides)
 
-    # Definir posiciones fijas (márgenes)
-    title_x, title_y = 50, 10      # Título muy arriba
-    table_x, table_y = 50, 80      # Tabla debajo del título, centrada horizontalmente
-
-    default_table_width = 600      # Ancho total de la tabla
-    default_table_height = 250     # Alto total de la tabla
+    # Posiciones y tamaños fijos
+    title_x, title_y = 50, 10        # Título pegado al borde superior
+    table_x, table_y = 50, 80        # Tabla posicionada debajo del título
+    default_table_width = 600        # Ancho total de la tabla
+    default_table_height = 250       # Alto total de la tabla
 
     requests = []
     for i, rutina in enumerate(routine_data):
@@ -133,7 +132,7 @@ def create_presentation(routine_data):
         title_id = f"title_{i}"
         table_id = f"table_{i}"
 
-        # Crear nueva diapositiva usando el layout predefinido
+        # Crear nueva diapositiva con el layout predefinido
         requests.append({
             "createSlide": {
                 "objectId": slide_id,
@@ -144,7 +143,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar título en la diapositiva: "Día X"
+        # Insertar título ("Día X")
         requests.append({
             "createShape": {
                 "objectId": title_id,
@@ -199,7 +198,7 @@ def create_presentation(routine_data):
         })
 
         # Insertar tabla en la diapositiva
-        num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
+        num_rows = len(rutina["rutina"]) + 1  # Encabezado + datos
         num_cols = 3
         requests.append({
             "createTable": {
@@ -223,7 +222,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # Insertar encabezados en la tabla
+        # Insertar encabezados de la tabla
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, header_text in enumerate(headers):
             requests.append(_insert_table_text(table_id, 0, col, header_text))
@@ -241,7 +240,7 @@ def create_presentation(routine_data):
                 }
             })
 
-        # Insertar datos en la tabla y aplicar colores alternos
+        # Insertar datos y aplicar colores alternos a cada celda
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests.append(_insert_table_text(table_id, row, 0, exercise["ejercicio"]))
             requests.append(_insert_table_text(table_id, row, 1, exercise["series"]))
@@ -250,7 +249,7 @@ def create_presentation(routine_data):
             for col in range(num_cols):
                 requests.append(_format_table_cell(table_id, row, col, row_color))
 
-        # Actualizar el ancho de la columna "Series" (índice 1) a 60 PT
+        # Actualizar el ancho de la columna "Series" (columna índice 1) a 60 PT
         requests.append({
             "updateTableColumnProperties": {
                 "objectId": table_id,
@@ -276,15 +275,4 @@ def create_presentation(routine_data):
     set_permissions(presentation_id)
     return f"https://docs.google.com/presentation/d/{presentation_id}"
 
-def set_permissions(file_id):
-    """Da permisos de edición a cualquiera con el enlace en Google Drive."""
-    permission = {
-        "type": "anyone",
-        "role": "writer"
-    }
-    drive_service.permissions().create(
-        fileId=file_id,
-        body=permission
-    ).execute()
-    print("✅ Permisos de edición configurados.")
-# -------------------------
+
