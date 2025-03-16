@@ -1,3 +1,4 @@
+import os
 import time
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
@@ -5,34 +6,51 @@ import json
 
 
 # 🔹 Configuración de credenciales
-SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/presentations"]
-SERVICE_ACCOUNT_FILE = "credenciales.json"  # Asegúrate de que este archivo es correcto
+SCOPES = ["https://www.googleapis.com/auth/drive",
+          "https://www.googleapis.com/auth/presentations"]
+# Asegúrate de que este archivo es correcto
+SERVICE_ACCOUNT_FILE = "credenciales.json"
 
-import os
-import json
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
 
 # 🔹 Cargar credenciales desde la variable de entorno
-credentials_json = os.getenv("GOOGLE_CREDENTIALS")
+credentials_json = os.getenv("GCP_CREDENTIALS")
+
 if not credentials_json:
-    raise ValueError("No se encontraron las credenciales de Google en las variables de entorno.")
+    raise ValueError(
+        "⚠ ERROR: No se encontraron las credenciales de Google en las variables de entorno.")
 
-credentials_info = json.loads(credentials_json)
-credentials = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+try:
+    # 🔹 Verifica que el JSON se está cargando correctamente
+    print("🔍 Cargando credenciales desde GCP_CREDENTIALS...")
+    credentials_info = json.loads(credentials_json)
 
-slides_service = build("slides", "v1", credentials=credentials)
-drive_service = build("drive", "v3", credentials=credentials)
+    # 🔹 Usa las credenciales correctamente
+    credentials = service_account.Credentials.from_service_account_info(
+        credentials_info)
+
+    # 🔹 Configurar Google Slides API
+    slides_service = build("slides", "v1", credentials=credentials)
+    drive_service = build("drive", "v3", credentials=credentials)
+
+    print("✅ Credenciales cargadas con éxito.")
+
+except json.JSONDecodeError as e:
+    raise ValueError(
+        f"❌ ERROR: No se pudo decodificar el JSON de credenciales. {str(e)}")
+except Exception as e:
+    raise ValueError(f"❌ ERROR en la autenticación con Google: {str(e)}")
 
 
-#credentials = service_account.Credentials.from_service_account_file(
+# credentials = service_account.Credentials.from_service_account_file(
 #    SERVICE_ACCOUNT_FILE, scopes=SCOPES
-#)
-#slides_service = build("slides", "v1", credentials=credentials)
-#drive_service = build("drive", "v3", credentials=credentials)
+# )
+# slides_service = build("slides", "v1", credentials=credentials)
+# drive_service = build("drive", "v3", credentials=credentials)
 
 # 🔹 ID de la plantilla de presentación
-TEMPLATE_PRESENTATION_ID = "1D4IDgelJUvbQQdkc3tF-K9k11THf7Au_ZYmuRYvxExM"  # Cambia esto por el ID correcto
+# Cambia esto por el ID correcto
+TEMPLATE_PRESENTATION_ID = "1D4IDgelJUvbQQdkc3tF-K9k11THf7Au_ZYmuRYvxExM"
+
 
 def create_presentation(routine_data):
     """
@@ -91,7 +109,8 @@ def create_presentation(routine_data):
         time.sleep(1)
 
         # 🔹 Insertar una tabla bien estructurada para los ejercicios
-        num_rows = len(rutina["rutina"]) + 1  # Agregar una fila extra para los títulos
+        # Agregar una fila extra para los títulos
+        num_rows = len(rutina["rutina"]) + 1
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
 
         table_id = f"table_{i}"
@@ -156,6 +175,7 @@ def create_presentation(routine_data):
 
     return f"https://docs.google.com/presentation/d/{presentation_id}"
 
+
 def set_permissions(file_id):
     """
     Da permisos de edición a cualquier persona con el enlace en Google Drive.
@@ -169,5 +189,3 @@ def set_permissions(file_id):
         fileId=file_id,
         body=permission
     ).execute()
-
-
