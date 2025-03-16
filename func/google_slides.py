@@ -55,22 +55,27 @@ def create_presentation(routine_data):
     presentation_id = copy["id"]
     print(f"✅ Presentación creada: {presentation_id}")
 
-    requests = []
+    # 🔹 Obtener las diapositivas existentes
+    presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
+    slides = presentation.get('slides', [])
 
-    # 🔹 Configurar fondo negro para toda la presentación
-    requests.append({
-        "updatePageProperties": {
-            "objectId": "p",
-            "pageProperties": {
-                "pageBackgroundFill": {
-                    "solidFill": {
-                        "color": {"rgbColor": _hex_to_rgb("#000000")}
+    # 🔹 Aplicar fondo negro a todas las diapositivas
+    requests = []
+    for slide in slides:
+        slide_id = slide["objectId"]
+        requests.append({
+            "updatePageProperties": {
+                "objectId": slide_id,
+                "pageProperties": {
+                    "pageBackgroundFill": {
+                        "solidFill": {
+                            "color": {"rgbColor": _hex_to_rgb("#000000")}
+                        }
                     }
-                }
-            },
-            "fields": "pageBackgroundFill.solidFill.color"
-        }
-    })
+                },
+                "fields": "pageBackgroundFill.solidFill.color"
+            }
+        })
 
     # 🔹 Crear diapositivas para cada rutina
     for i, rutina in enumerate(routine_data):
@@ -209,4 +214,3 @@ def set_permissions(file_id):
         fileId=file_id,
         body=permission
     ).execute()
-
