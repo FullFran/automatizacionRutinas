@@ -30,6 +30,10 @@ except Exception as e:
 TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
 ROUTINE_LAYOUT_ID = os.getenv("ROUTINE_LAYOUT_ID")  # ID del layout específico para rutinas
 
+# 🔹 Dimensiones de la diapositiva (Google Slides usa PT como unidad)
+SLIDE_WIDTH = 960  # Ancho estándar
+SLIDE_HEIGHT = 540  # Alto estándar
+
 def create_presentation(routine_data):
     """
     Crea una presentación en Google Slides basada en una plantilla, agregando texto y tablas sin placeholders.
@@ -65,7 +69,7 @@ def create_presentation(routine_data):
             }
         })
 
-        # 🔹 Crear título manualmente como TEXT_BOX
+        # 🔹 Crear título manualmente como TEXT_BOX y centrarlo arriba
         title_id = f"title_{i}"
         requests.append({
             "createShape": {
@@ -75,10 +79,13 @@ def create_presentation(routine_data):
                     "pageObjectId": slide_id,
                     "size": {
                         "height": {"magnitude": 50, "unit": "PT"},
-                        "width": {"magnitude": 600, "unit": "PT"}
+                        "width": {"magnitude": 700, "unit": "PT"}
                     },
                     "transform": {
-                        "scaleX": 1, "scaleY": 1, "translateX": 100, "translateY": 50, "unit": "PT"
+                        "scaleX": 1, "scaleY": 1, 
+                        "translateX": (SLIDE_WIDTH - 700) / 2,  # Centrado horizontalmente
+                        "translateY": 20,  # Mucho más arriba
+                        "unit": "PT"
                     }
                 }
             }
@@ -92,10 +99,15 @@ def create_presentation(routine_data):
             }
         })
 
-        # 🔹 Insertar tabla
+        # 🔹 Insertar tabla centrada dinámicamente
         num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
         table_id = f"table_{i}"
+
+        table_width = 600  # Ancho de la tabla
+        table_height = num_rows * 30  # Ajustar altura según cantidad de filas
+        table_x = (SLIDE_WIDTH - table_width) / 2  # Centrar tabla en X
+        table_y = (SLIDE_HEIGHT - table_height) / 2 + 30  # Centrar tabla en Y, dejando espacio para el título
 
         requests.append({
             "createTable": {
@@ -103,7 +115,17 @@ def create_presentation(routine_data):
                 "rows": num_rows,
                 "columns": num_cols,
                 "elementProperties": {
-                    "pageObjectId": slide_id
+                    "pageObjectId": slide_id,
+                    "size": {
+                        "width": {"magnitude": table_width, "unit": "PT"},
+                        "height": {"magnitude": table_height, "unit": "PT"}
+                    },
+                    "transform": {
+                        "scaleX": 1, "scaleY": 1, 
+                        "translateX": table_x, 
+                        "translateY": table_y, 
+                        "unit": "PT"
+                    }
                 }
             }
         })
@@ -153,28 +175,6 @@ def create_presentation(routine_data):
                     "objectId": table_id,
                     "cellLocation": {"rowIndex": row, "columnIndex": 2},
                     "text": ", ".join(exercise["repeticiones"])
-                }
-            })
-
-            # Aplicar color de fondo alterno a las filas de la tabla
-            row_color = {"red": 0.1, "green": 0.2, "blue": 0.5} if row % 2 == 0 else {"red": 0.2, "green": 0.4, "blue": 0.8}
-
-            requests.append({
-                "updateTableCellProperties": {
-                    "objectId": table_id,
-                    "tableRange": {
-                        "location": {"rowIndex": row, "columnIndex": 0},
-                        "rowSpan": 1,
-                        "columnSpan": num_cols
-                    },
-                    "tableCellProperties": {
-                        "tableCellBackgroundFill": {
-                            "solidFill": {
-                                "color": {"rgbColor": row_color}
-                            }
-                        }
-                    },
-                    "fields": "tableCellBackgroundFill.solidFill.color"
                 }
             })
 
