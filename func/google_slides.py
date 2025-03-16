@@ -278,14 +278,4 @@ def create_presentation(routine_data):
     print("✅ Presentación generada exitosamente.")
     return f"https://docs.google.com/presentation/d/{presentation_id}"
 
-def set_permissions(file_id):
-    """Da permisos de edición a cualquier persona con el enlace."""
-    permission = {
-        "type": "anyone",
-        "role": "writer"
-    }
-    drive_service.permissions().create(
-        fileId=file_id,
-        body=permission
-    ).execute()
-    print("✅ Permisos de edición configurados.")
+
