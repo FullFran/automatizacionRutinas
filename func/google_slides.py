@@ -59,8 +59,6 @@ def create_presentation(routine_data):
     requests = []
     for i, rutina in enumerate(routine_data):
         slide_id = f"slide_{i + num_existing_slides}"
-        title_id = f"title_{i}"
-        table_id = f"table_{i}"
 
         # Crear una nueva diapositiva con el layout personalizado
         requests.append({
@@ -73,111 +71,84 @@ def create_presentation(routine_data):
             }
         })
 
-        # 🔹 Insertar título con "Día 1", "Día 2", etc.
+    # 🔹 Enviar la solicitud de creación de diapositivas
+    slides_service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={"requests": requests}
+    ).execute()
+
+    # 🔹 Ahora obtenemos las nuevas diapositivas creadas
+    presentation = slides_service.presentations().get(presentationId=presentation_id).execute()
+    slides = presentation.get('slides', [])
+
+    # 🔹 Insertar el contenido dentro de los placeholders existentes
+    requests = []
+    for i, rutina in enumerate(routine_data):
+        slide = slides[num_existing_slides + i]  # Obtener la diapositiva recién creada
+        placeholders = {element['objectId']: element for element in slide.get('pageElements', [])}
+
+        # Buscar placeholders específicos en el layout
+        title_placeholder = next((k for k, v in placeholders.items() if 'TITLE' in v.get('shape', {}).get('text', {})), None)
+        table_placeholder = next((k for k, v in placeholders.items() if 'TABLE' in v.get('shape', {})), None)
+
+        if not title_placeholder or not table_placeholder:
+            print(f"⚠ Advertencia: No se encontraron placeholders en la diapositiva {i+1}.")
+            continue
+
+        # Insertar título en el placeholder correcto
         requests.append({
             "insertText": {
-                "objectId": slide_id,  # El layout debería contener un placeholder para el título
-                "text": f"Día {i + 1}"
+                "objectId": title_placeholder,
+                "text": f"Rutina {i + 1}"
             }
         })
 
-        # 🔹 Insertar la tabla centrada y con tamaño ajustable
+        # Insertar la tabla en el placeholder correcto
         num_rows = len(rutina["rutina"]) + 1  # +1 para los encabezados
         num_cols = 3  # Columnas: Ejercicio, Series, Repeticiones
-
-        # Dimensiones de la tabla (ajustamos para que no se desborde)
-        table_width = 400
-        table_height = min(200 + (num_rows * 20), 350)  # Ajusta el alto según la cantidad de filas
-
         requests.append({
             "createTable": {
-                "objectId": table_id,
+                "objectId": table_placeholder,
                 "rows": num_rows,
                 "columns": num_cols,
                 "elementProperties": {
-                    "pageObjectId": slide_id,
-                    "size": {
-                        "width": {"magnitude": table_width, "unit": "PT"},
-                        "height": {"magnitude": table_height, "unit": "PT"}
-                    },
-                    "transform": {
-                        "scaleX": 1, "scaleY": 1,
-                        "translateX": 100,  # Centramos la tabla
-                        "translateY": 150,  # Espacio suficiente debajo del título
-                        "unit": "PT"
-                    }
+                    "pageObjectId": slide['objectId']
                 }
             }
         })
 
-        # 🔹 Insertar títulos de las columnas
+        # Insertar títulos de las columnas
         headers = ["Ejercicio", "Series", "Repeticiones"]
         for col, text in enumerate(headers):
             requests.append({
                 "insertText": {
-                    "objectId": table_id,
+                    "objectId": table_placeholder,
                     "cellLocation": {"rowIndex": 0, "columnIndex": col},
                     "text": text
                 }
             })
-            # Aplicar estilo a los encabezados (blanco y negrita)
-            requests.append({
-                "updateTextStyle": {
-                    "objectId": table_id,
-                    "cellLocation": {"rowIndex": 0, "columnIndex": col},
-                    "style": {
-                        "bold": True,
-                        "foregroundColor": {
-                            "opaqueColor": {"rgbColor": {"red": 1, "green": 1, "blue": 1}}  # Blanco
-                        }
-                    },
-                    "fields": "bold,foregroundColor"
-                }
-            })
 
-        # 🔹 Insertar datos en la tabla y aplicar formato
+        # Insertar datos en la tabla
         for row, exercise in enumerate(rutina["rutina"], start=1):
             requests.append({
                 "insertText": {
-                    "objectId": table_id,
+                    "objectId": table_placeholder,
                     "cellLocation": {"rowIndex": row, "columnIndex": 0},
                     "text": exercise["ejercicio"]
                 }
             })
             requests.append({
                 "insertText": {
-                    "objectId": table_id,
+                    "objectId": table_placeholder,
                     "cellLocation": {"rowIndex": row, "columnIndex": 1},
                     "text": exercise["series"]
                 }
             })
             requests.append({
                 "insertText": {
-                    "objectId": table_id,
+                    "objectId": table_placeholder,
                     "cellLocation": {"rowIndex": row, "columnIndex": 2},
                     "text": ", ".join(exercise["repeticiones"])
-                }
-            })
-
-            # Aplicar color de fondo alterno a las filas de la tabla
-            row_color = {"red": 0.1, "green": 0.2, "blue": 0.5} if row % 2 == 0 else {"red": 0.2, "green": 0.4, "blue": 0.8}
-
-            requests.append({
-                "updateTableCellProperties": {
-                    "objectId": table_id,
-                    "tableRange": {
-                        "location": {"rowIndex": row, "columnIndex": 0},
-                        "rowSpan": 1,
-                        "columnSpan": num_cols
-                    },
-                    "tableCellProperties": {
-                        "tableCellBackgroundFill": {
-                            "solidFill": {
-                                "color": {"rgbColor": row_color}
-                            }
-                        }
-                    },
-                    "fields": "tableCellBackgroundFill.solidFill.color"
                 }
             })
 
