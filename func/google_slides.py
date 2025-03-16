@@ -49,7 +49,7 @@ except Exception as e:
 
 # 🔹 ID de la plantilla de presentación
 # Cambia esto por el ID correcto
-TEMPLATE_PRESENTATION_ID = "1D4IDgelJUvbQQdkc3tF-K9k11THf7Au_ZYmuRYvxExM"
+TEMPLATE_PRESENTATION_ID = os.getenv("TEMPLATE_PRESENTATION_ID")
 
 
 def create_presentation(routine_data):
