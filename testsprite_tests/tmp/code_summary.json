@@ -1,0 +1,167 @@
+{
+  "tech_stack": [
+    "Python",
+    "FastAPI",
+    "Langchain",
+    "Google Generative AI",
+    "Google Slides API",
+    "Telegram Bot API"
+  ],
+  "features": [
+    {
+      "name": "Health Check",
+      "description": "Endpoint to check api availability",
+      "files": [
+        "src/api/routes/health.py"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/health": {
+            "get": {
+              "summary": "Health Check",
+              "operationId": "health_check_health_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HealthResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "components": {
+          "schemas": {
+            "HealthResponse": {
+              "title": "HealthResponse",
+              "type": "object",
+              "properties": {
+                "status": {
+                  "title": "Status",
+                  "type": "string"
+                },
+                "version": {
+                  "title": "Version",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status",
+                "version"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Parse Routine",
+      "description": "Parsear texto de rutina con IA.",
+      "files": [
+        "src/api/routes/routines.py"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/v1/routines/parse": {
+            "post": {
+              "summary": "Parsea texto de rutina con IA.",
+              "operationId": "parse_routine_api_v1_routines_parse_post",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/ParseRoutineRequest"
+                    }
+                  }
+                },
+                "required": true
+              },
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/RoutineResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Generate Slides",
+      "description": "Genera una presentación de Google Slides.",
+      "files": [
+        "src/api/routes/routines.py"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/v1/routines/generate-slides": {
+            "post": {
+              "summary": "Genera una presentación de Google Slides.",
+              "operationId": "generate_slides_api_v1_routines_generate_slides_post",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/GenerateSlidesRequest"
+                    }
+                  }
+                },
+                "required": true
+              },
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/PresentationResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Telegram Webhook",
+      "description": "Webhook para recibir updates de Telegram.",
+      "files": [
+        "src/api/routes/telegram_webhook.py"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "paths": {
+          "/api/v1/telegram/webhook": {
+            "post": {
+              "summary": "Webhook para recibir updates de Telegram.",
+              "operationId": "telegram_webhook_api_v1_telegram_webhook_post",
+              "responses": {
+                "200": {
+                  "description": "Successful Response"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

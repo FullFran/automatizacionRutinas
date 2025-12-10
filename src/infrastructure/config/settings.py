@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────────────────────────
     # Telegram
     # ─────────────────────────────────────────────────────────
-    telegram_token: str = Field(..., description="Token del bot de Telegram")
+    telegram_token: str = Field(
+        ..., alias="TELEGRAM_BOT_TOKEN", description="Token del bot de Telegram"
+    )
     webhook_url: str = Field(..., description="URL del webhook para Telegram")
 
     # ─────────────────────────────────────────────────────────
@@ -54,6 +56,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"
 
 
 @lru_cache()

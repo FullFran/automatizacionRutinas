@@ -1,0 +1,22 @@
+[
+  {
+    "id": "TC001",
+    "title": "health check endpoint returns service status and version",
+    "description": "Verify that the health check endpoint /health returns a 200 status code with a JSON response containing the service status and current version as specified in the HealthResponse schema."
+  },
+  {
+    "id": "TC002",
+    "title": "parse routine endpoint parses workout text into structured data",
+    "description": "Test the /api/v1/routines/parse POST endpoint to ensure it correctly accepts workout routine text in the request body and returns structured JSON data representing the parsed workout routine using AI parsing logic."
+  },
+  {
+    "id": "TC003",
+    "title": "generate slides endpoint creates google slides presentation",
+    "description": "Validate that the /api/v1/routines/generate-slides POST endpoint generates a Google Slides presentation based on the provided structured workout routine data, returning a shareable presentation link in the response."
+  },
+  {
+    "id": "TC004",
+    "title": "telegram webhook endpoint receives and processes updates",
+    "description": "Ensure the /api/v1/telegram/webhook POST endpoint correctly receives Telegram updates, triggers the AI parsing and slide generation workflows, and returns a successful response."
+  }
+]

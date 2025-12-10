@@ -1,0 +1,16 @@
+{
+  "status": "commited",
+  "type": "backend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:8000",
+  "backendAuthType": "public",
+  "executionArgs": {
+    "projectName": "automatizacionRutinas",
+    "projectPath": "/home/franblakia/blakia/automatizacionRutinas",
+    "testIds": [],
+    "additionalInstruction": "",
+    "envs": {
+      "API_KEY": "sk-user-95F21Z_r7fiFJiokIu4pcTWabkDay6GZh4PoWQ63awwQ47ymq16W7LeVyoyv2SDxDVR9IpiJi6oaasJi5sdAG-wmCfmJlWrupAQKk87cEYaWgQLyWyzyDyJshnM-nt-MwIM"
+    }
+  }
+}
