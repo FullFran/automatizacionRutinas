@@ -1,0 +1,19 @@
+name: Issue Management
+
+on:
+  issues:
+    types: [opened, labeled]
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-assign to project
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: https://github.com/orgs/blakiatech/projects/1
+          github-token: ${{ secrets.GH_TOKEN }}
+      
+      - name: Add to sprint if high priority
+        if: contains(github.event.issue.labels.*.name, 'priority: high')
+        run: gh issue edit ${{ github.event.issue.number }} --add-label "sprint: current"
