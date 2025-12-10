@@ -1,0 +1,203 @@
+{
+  "meta": {
+    "project": "AI-Powered Workout Routine Organizer API",
+    "date": "2025-12-10",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "An AI-powered API that converts unstructured workout routine text into structured data and generates professional Google Slides presentations, interfacing with users via a Telegram Bot for ease of use.",
+  "core_goals": [
+    "Automate the creation of workout routines to eliminate manual formatting.",
+    "Leverage Google Gemini AI to parse natural language workout instructions into structured JSON data.",
+    "Provide a seamless user interaction through Telegram Bot integration.",
+    "Automatically generate high-quality Google Slides presentations based on parsed workout data."
+  ],
+  "key_features": [
+    "Telegram webhook endpoint to receive workout routine messages from users.",
+    "AI-powered parsing of workout routine text into structured exercise data using Google Gemini via Langchain.",
+    "Generation of Google Slides presentations using a predefined template, with one slide per exercise filled with relevant data.",
+    "Health check API endpoint to verify service availability and version.",
+    "Support for asynchronous processing to handle concurrent requests efficiently."
+  ],
+  "user_flow_summary": [
+    "User sends a workout routine text message via Telegram to the bot.",
+    "The system receives the message through the Telegram webhook endpoint.",
+    "Text is processed by Google Gemini AI using Langchain to parse into structured JSON data.",
+    "Structured routine data is used to generate a Google Slides presentation following a predefined template.",
+    "A shareable link to the generated presentation is sent back through the Telegram Bot to the user.",
+    "Users can verify system health via the health check endpoint."
+  ],
+  "validation_criteria": [
+    "All new src/ code must include unit and integration tests using pytest ensuring coverage of domain logic and API endpoints.",
+    "Telegram webhook must correctly receive and process messages, triggering AI parsing and slide generation workflows.",
+    "Google Slides presentations must comply with the template structure and reflect parsed workout data accurately.",
+    "The health check endpoint should reliably return service status and current version.",
+    "System must support concurrent requests with adequate performance and include appropriate error handling and response validation."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "Python",
+      "FastAPI",
+      "Langchain",
+      "Google Generative AI",
+      "Google Slides API",
+      "Telegram Bot API"
+    ],
+    "features": [
+      {
+        "name": "Health Check",
+        "description": "Endpoint to check api availability",
+        "files": [
+          "src/api/routes/health.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/health": {
+              "get": {
+                "summary": "Health Check",
+                "operationId": "health_check_health_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HealthResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "components": {
+            "schemas": {
+              "HealthResponse": {
+                "title": "HealthResponse",
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "title": "Status",
+                    "type": "string"
+                  },
+                  "version": {
+                    "title": "Version",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "version"
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Parse Routine",
+        "description": "Parsear texto de rutina con IA.",
+        "files": [
+          "src/api/routes/routines.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/v1/routines/parse": {
+              "post": {
+                "summary": "Parsea texto de rutina con IA.",
+                "operationId": "parse_routine_api_v1_routines_parse_post",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/ParseRoutineRequest"
+                      }
+                    }
+                  },
+                  "required": true
+                },
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/RoutineResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Generate Slides",
+        "description": "Genera una presentación de Google Slides.",
+        "files": [
+          "src/api/routes/routines.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/v1/routines/generate-slides": {
+              "post": {
+                "summary": "Genera una presentación de Google Slides.",
+                "operationId": "generate_slides_api_v1_routines_generate_slides_post",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/GenerateSlidesRequest"
+                      }
+                    }
+                  },
+                  "required": true
+                },
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/PresentationResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "Telegram Webhook",
+        "description": "Webhook para recibir updates de Telegram.",
+        "files": [
+          "src/api/routes/telegram_webhook.py"
+        ],
+        "api_doc": {
+          "openapi": "3.0.0",
+          "paths": {
+            "/api/v1/telegram/webhook": {
+              "post": {
+                "summary": "Webhook para recibir updates de Telegram.",
+                "operationId": "telegram_webhook_api_v1_telegram_webhook_post",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

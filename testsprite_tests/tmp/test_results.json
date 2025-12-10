@@ -1,0 +1,58 @@
+[
+  {
+    "projectId": "6694aa1d-7bfe-400f-9be6-e790b424dfc8",
+    "testId": "d99dd4d8-5a1f-493a-bff7-f19e278dfdb6",
+    "userId": "f4e8e438-6011-7079-ddb4-ee306275a5f5",
+    "title": "TC001-health check endpoint returns service status and version",
+    "description": "Verify that the health check endpoint /health returns a 200 status code with a JSON response containing the service status and current version as specified in the HealthResponse schema.",
+    "code": "import requests\n\ndef test_health_check_returns_status_and_version():\n    url = \"http://localhost:8000/health\"\n    headers = {\n        \"Accept\": \"application/json\"\n    }\n    try:\n        response = requests.get(url, headers=headers, timeout=30)\n        response.raise_for_status()\n    except requests.RequestException as e:\n        assert False, f\"Request to {url} failed: {e}\"\n\n    assert response.status_code == 200, f\"Expected status code 200, got {response.status_code}\"\n\n    try:\n        data = response.json()\n    except ValueError:\n        assert False, \"Response is not valid JSON\"\n\n    assert \"status\" in data, \"Response JSON missing 'status' field\"\n    assert isinstance(data[\"status\"], str), \"'status' field is not a string\"\n\n    assert \"version\" in data, \"Response JSON missing 'version' field\"\n    assert isinstance(data[\"version\"], str), \"'version' field is not a string\"\n\ntest_health_check_returns_status_and_version()",
+    "testStatus": "PASSED",
+    "testError": "",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2025-12-10T16:58:18.048Z",
+    "modified": "2025-12-10T16:58:29.319Z"
+  },
+  {
+    "projectId": "6694aa1d-7bfe-400f-9be6-e790b424dfc8",
+    "testId": "d4b3b235-4aec-4720-b689-5bc6e0f2221f",
+    "userId": "f4e8e438-6011-7079-ddb4-ee306275a5f5",
+    "title": "TC002-parse routine endpoint parses workout text into structured data",
+    "description": "Test the /api/v1/routines/parse POST endpoint to ensure it correctly accepts workout routine text in the request body and returns structured JSON data representing the parsed workout routine using AI parsing logic.",
+    "code": "import requests\n\nBASE_URL = \"http://localhost:8000\"\nENDPOINT = \"/api/v1/routines/parse\"\nTIMEOUT = 30\n\n\ndef test_parse_routine_endpoint_parses_workout_text_into_structured_data():\n    url = BASE_URL + ENDPOINT\n    headers = {\n        \"Content-Type\": \"application/json\"\n    }\n    # Example workout routine text that might be sent, based on typical input to an AI parsing endpoint\n    payload = {\n        \"text\": (\n            \"Monday: Chest\\n\"\n            \"- Bench Press 3 sets of 10 reps\\n\"\n            \"- Dumbbell Fly 3 sets of 12 reps\\n\"\n            \"Wednesday: Back\\n\"\n            \"- Pull Ups 4 sets to failure\\n\"\n            \"- Deadlifts 3 sets of 5 reps\\n\"\n            \"Friday: Legs\\n\"\n            \"- Squats 4 sets of 8 reps\\n\"\n            \"- Leg Press 3 sets of 10 reps\"\n        )\n    }\n\n    try:\n        response = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)\n    except requests.RequestException as e:\n        assert False, f\"Request to {url} failed: {e}\"\n\n    # Validate HTTP status code\n    assert response.status_code == 200, f\"Expected status code 200, got {response.status_code}\"\n\n    # Validate content-type header\n    content_type = response.headers.get(\"Content-Type\", \"\")\n    assert \"application/json\" in content_type, f\"Expected JSON response, got Content-Type: {content_type}\"\n\n    try:\n        data = response.json()\n    except ValueError:\n        assert False, \"Response body is not valid JSON\"\n\n    # Validate that the response is a dict/object\n    assert isinstance(data, dict), \"Response JSON is not an object\"\n\n    # Additional sanity check: response should not be empty\n    assert len(data) > 0, \"Response JSON is empty\"\n\n\ntest_parse_routine_endpoint_parses_workout_text_into_structured_data()\n",
+    "testStatus": "PASSED",
+    "testError": "",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2025-12-10T16:58:18.054Z",
+    "modified": "2025-12-10T16:58:52.828Z"
+  },
+  {
+    "projectId": "6694aa1d-7bfe-400f-9be6-e790b424dfc8",
+    "testId": "b4495a50-2fe6-48b9-9462-a0405ea2d591",
+    "userId": "f4e8e438-6011-7079-ddb4-ee306275a5f5",
+    "title": "TC003-generate slides endpoint creates google slides presentation",
+    "description": "Validate that the /api/v1/routines/generate-slides POST endpoint generates a Google Slides presentation based on the provided structured workout routine data, returning a shareable presentation link in the response.",
+    "code": "import requests\n\nBASE_URL = \"http://localhost:8000\"\nTIMEOUT = 30\n\ndef test_generate_slides_creates_presentation():\n    url = f\"{BASE_URL}/api/v1/routines/generate-slides\"\n    headers = {\n        \"Content-Type\": \"application/json\"\n    }\n\n    # Changed field 'name' to 'routine_name' to match expected API payload\n    payload = {\n        \"routine_name\": \"Full Body Workout\",\n        \"exercises\": [\n            {\n                \"name\": \"Push Ups\",\n                \"sets\": 3,\n                \"reps\": 15,\n                \"rest_seconds\": 60,\n                \"description\": \"Standard push ups focusing on chest and triceps.\"\n            },\n            {\n                \"name\": \"Squats\",\n                \"sets\": 4,\n                \"reps\": 20,\n                \"rest_seconds\": 90,\n                \"description\": \"Bodyweight squats to strengthen legs and glutes.\"\n            }\n        ],\n        \"notes\": \"Perform exercises consecutively with rest in between.\"\n    }\n\n    try:\n        response = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)\n        response.raise_for_status()\n    except requests.RequestException as e:\n        assert False, f\"Request to generate slides failed: {e}\"\n\n    # Validate response code\n    assert response.status_code == 200\n\n    # Validate response content type\n    content_type = response.headers.get(\"Content-Type\", \"\")\n    assert \"application/json\" in content_type\n\n    response_json = response.json()\n\n    # Validate expected keys in response (PresentationResponse schema)\n    assert \"presentation_link\" in response_json, \"Response missing 'presentation_link'\"\n    link = response_json[\"presentation_link\"]\n\n    # Simple validation: the link should be a non-empty string and look like a URL\n    assert isinstance(link, str) and link.startswith(\"http\"), \"Invalid presentation link returned\"\n\n\ntest_generate_slides_creates_presentation()\n",
+    "testStatus": "FAILED",
+    "testError": "Traceback (most recent call last):\n  File \"<string>\", line 36, in test_generate_slides_creates_presentation\n  File \"/var/task/requests/models.py\", line 1024, in raise_for_status\n    raise HTTPError(http_error_msg, response=self)\nrequests.exceptions.HTTPError: 422 Client Error: Unprocessable Entity for url: http://localhost:8000/api/v1/routines/generate-slides\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/var/task/handler.py\", line 258, in run_with_retry\n    exec(code, exec_env)\n  File \"<string>\", line 57, in <module>\n  File \"<string>\", line 38, in test_generate_slides_creates_presentation\nAssertionError: Request to generate slides failed: 422 Client Error: Unprocessable Entity for url: http://localhost:8000/api/v1/routines/generate-slides\n",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2025-12-10T16:58:18.061Z",
+    "modified": "2025-12-10T16:58:58.792Z"
+  },
+  {
+    "projectId": "6694aa1d-7bfe-400f-9be6-e790b424dfc8",
+    "testId": "e2a19d62-2630-4e7e-ac76-e78e0803f187",
+    "userId": "f4e8e438-6011-7079-ddb4-ee306275a5f5",
+    "title": "TC004-telegram webhook endpoint receives and processes updates",
+    "description": "Ensure the /api/v1/telegram/webhook POST endpoint correctly receives Telegram updates, triggers the AI parsing and slide generation workflows, and returns a successful response.",
+    "code": "import requests\n\nBASE_URL = \"http://localhost:8000\"\nTIMEOUT = 30\n\ndef test_telegram_webhook_receives_and_processes_updates():\n    url = f\"{BASE_URL}/api/v1/telegram/webhook\"\n    headers = {\n        \"Content-Type\": \"application/json\"\n    }\n    # Simulated Telegram update payload with a workout routine text message as would be sent to bot webhook\n    payload = {\n        \"update_id\": 10000,\n        \"message\": {\n            \"message_id\": 1365,\n            \"from\": {\n                \"id\": 123456789,\n                \"is_bot\": False,\n                \"first_name\": \"TestUser\",\n                \"username\": \"testuser\",\n                \"language_code\": \"en\"\n            },\n            \"chat\": {\n                \"id\": 123456789,\n                \"first_name\": \"TestUser\",\n                \"username\": \"testuser\",\n                \"type\": \"private\"\n            },\n            \"date\": 1618321234,\n            \"text\": \"Monday: 3x10 push-ups, 3x15 squats; Tuesday: 5x5 pull-ups\"\n        }\n    }\n\n    try:\n        response = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)\n        assert response.status_code == 200, f\"Expected HTTP 200, got {response.status_code}\"\n        \n        # As per PRD, no explicit response schema is required,\n        # but ensure response content-type is JSON or empty (if no content)\n        content_type = response.headers.get(\"Content-Type\", \"\")\n        # Accept either empty body or JSON response\n        if response.content:\n            assert \"application/json\" in content_type, \"Response content-type is not application/json\"\n            # Optionally parse json to ensure no error\n            json_response = response.json()\n            # No specific fields required, just check it's a dict or empty dict\n            assert isinstance(json_response, dict), \"Response JSON is not a dictionary\"\n    except requests.RequestException as e:\n        assert False, f\"Request failed: {e}\"\n\ntest_telegram_webhook_receives_and_processes_updates()",
+    "testStatus": "PASSED",
+    "testError": "",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2025-12-10T16:58:18.067Z",
+    "modified": "2025-12-10T16:58:37.449Z"
+  }
+]
