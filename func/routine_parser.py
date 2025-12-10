@@ -1,32 +1,41 @@
 import json
 import re
-from pydantic import BaseModel, ValidationError
-from typing import List, Dict
-from func.config import GEMINI_API_KEY
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.schema import SystemMessage, HumanMessage
+from typing import Dict, List
+
 import google.generativeai as genai
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import BaseModel, ValidationError
+
+from func.config import GEMINI_API_KEY, GEMINI_MODEL
 
 # Configurar Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 
 llm = ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
+    model=GEMINI_MODEL,
     google_api_key=GEMINI_API_KEY,
-    credentials=None  # Evita que use ADC
+    credentials=None,  # Evita que use ADC
 )
+
 
 class RoutineItem(BaseModel):
     ejercicio: str
     series: str
     repeticiones: List[str]
 
+
 def split_routines(text: str) -> List[str]:
     """
     Separa el texto en diferentes rutinas cuando hay más de un salto de línea consecutivo.
     """
-    routines = re.split(r'\n{2,}', text.strip())  # Divide cuando hay 2 o más saltos de línea
-    return [routine.strip() for routine in routines if routine.strip()]  # Elimina espacios vacíos
+    routines = re.split(
+        r"\n{2,}", text.strip()
+    )  # Divide cuando hay 2 o más saltos de línea
+    return [
+        routine.strip() for routine in routines if routine.strip()
+    ]  # Elimina espacios vacíos
+
 
 def parse_routine(text: str) -> List[Dict[str, List[dict]]]:
     """
@@ -66,10 +75,14 @@ def parse_routine(text: str) -> List[Dict[str, List[dict]]]:
             - Por lo general una rutina tiene menos de 10 ejercicios.
             """
 
-        response = llm.invoke([
-            SystemMessage(content="Eres un asistente que estructura rutinas de entrenamiento."),
-            HumanMessage(content=prompt)
-        ])
+        response = llm.invoke(
+            [
+                SystemMessage(
+                    content="Eres un asistente que estructura rutinas de entrenamiento."
+                ),
+                HumanMessage(content=prompt),
+            ]
+        )
 
         try:
             # 🔹 Limpiar triple comillas y etiquetas de código
@@ -89,6 +102,8 @@ def parse_routine(text: str) -> List[Dict[str, List[dict]]]:
             print(cleaned_content)
             raise ValueError("La respuesta de Gemini no es un JSON válido.") from e
         except ValidationError as e:
-            raise ValueError("La estructura de la rutina no coincide con el modelo esperado.") from e
+            raise ValueError(
+                "La estructura de la rutina no coincide con el modelo esperado."
+            ) from e
 
     return structured_routines
