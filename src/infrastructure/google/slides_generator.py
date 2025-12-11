@@ -38,7 +38,14 @@ class GoogleSlidesGenerator(PresentationGeneratorInterface):
             template_id: ID de la plantilla de presentación
             layout_id: ID del layout para rutinas
         """
-        credentials_info = json.loads(credentials_json)
+        # Manejar caracteres de escape en el JSON (común en vars de entorno)
+        try:
+            credentials_info = json.loads(credentials_json)
+        except json.JSONDecodeError:
+            # Intentar escapar newlines literales
+            fixed_json = credentials_json.replace("\\n", "\n")
+            credentials_info = json.loads(fixed_json)
+
         credentials = service_account.Credentials.from_service_account_info(
             credentials_info, scopes=SCOPES
         )
