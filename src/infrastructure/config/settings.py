@@ -5,6 +5,7 @@ Carga variables de entorno desde .env y las valida con tipos.
 """
 
 from functools import lru_cache
+from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -44,6 +45,42 @@ class Settings(BaseSettings):
         ..., description="ID de la plantilla de Google Slides"
     )
     routine_layout_id: str = Field(..., description="ID del layout para rutinas")
+
+    # ─────────────────────────────────────────────────────────
+    # Chatwoot (Opcional - Para logging de conversaciones)
+    # ─────────────────────────────────────────────────────────
+    chatwoot_base_url: Optional[str] = Field(
+        default=None,
+        alias="CHATWOOT_BASE_URL",
+        description="URL base de Chatwoot (ej: https://chat.blakia.es)",
+    )
+    chatwoot_account_id: Optional[str] = Field(
+        default=None,
+        alias="CHATWOOT_ACCOUNT_ID",
+        description="ID de cuenta de Chatwoot",
+    )
+    chatwoot_inbox_id: Optional[str] = Field(
+        default=None,
+        alias="CHATWOOT_INBOX_ID",
+        description="ID del inbox API en Chatwoot",
+    )
+    chatwoot_api_token: Optional[str] = Field(
+        default=None,
+        alias="CHATWOOT_API_ACCESS_TOKEN",
+        description="Token de acceso API de Chatwoot",
+    )
+
+    @property
+    def chatwoot_enabled(self) -> bool:
+        """Retorna True si todas las config de Chatwoot están presentes."""
+        return all(
+            [
+                self.chatwoot_base_url,
+                self.chatwoot_account_id,
+                self.chatwoot_inbox_id,
+                self.chatwoot_api_token,
+            ]
+        )
 
     # ─────────────────────────────────────────────────────────
     # Aplicación

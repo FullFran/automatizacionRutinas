@@ -10,6 +10,8 @@ from functools import lru_cache
 from application.use_cases.generate_presentation import GeneratePresentationUseCase
 from application.use_cases.parse_routine import ParseRoutineUseCase
 from infrastructure.ai.gemini_parser import GeminiParser
+from infrastructure.chatwoot import ChatwootLogger, NullChatwootLogger
+from infrastructure.chatwoot.interface import ChatwootLoggerInterface
 from infrastructure.config.settings import settings
 from infrastructure.google.slides_generator import GoogleSlidesGenerator
 from infrastructure.telegram.bot import TelegramBot
@@ -45,6 +47,29 @@ def get_telegram_bot() -> TelegramBot:
     return TelegramBot(token=settings.telegram_token, webhook_url=settings.webhook_url)
 
 
+@lru_cache()
+def get_chatwoot_logger() -> ChatwootLoggerInterface:
+    """
+    Devuelve logger de Chatwoot si está configurado, o NullChatwootLogger si no.
+
+    Las variables de entorno requeridas son:
+    - CHATWOOT_BASE_URL
+    - CHATWOOT_ACCOUNT_ID
+    - CHATWOOT_INBOX_ID
+    - CHATWOOT_API_ACCESS_TOKEN
+    """
+    if settings.chatwoot_enabled:
+        logger.info("✅ Chatwoot logging habilitado")
+        return ChatwootLogger(
+            base_url=settings.chatwoot_base_url,
+            account_id=settings.chatwoot_account_id,
+            inbox_id=settings.chatwoot_inbox_id,
+            api_token=settings.chatwoot_api_token,
+        )
+    logger.info("ℹ️ Chatwoot logging deshabilitado (variables no configuradas)")
+    return NullChatwootLogger()
+
+
 # ─────────────────────────────────────────────────────────
 # Use Cases (nuevas instancias, pero con dependencias singleton)
 # ─────────────────────────────────────────────────────────
@@ -72,4 +97,5 @@ def get_telegram_handler() -> TelegramHandler:
         bot=get_telegram_bot(),
         parse_use_case=get_parse_routine_use_case(),
         generate_use_case=get_generate_presentation_use_case(),
+        chatwoot_logger=get_chatwoot_logger(),
     )

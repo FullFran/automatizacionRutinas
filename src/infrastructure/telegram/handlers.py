@@ -5,12 +5,13 @@ Maneja los diferentes tipos de mensajes y callbacks.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from application.dtos.routine_dto import RoutineDTO
 from application.use_cases.generate_presentation import GeneratePresentationUseCase
 from application.use_cases.parse_routine import ParseRoutineUseCase
 from domain.exceptions import DomainException
+from infrastructure.chatwoot.interface import ChatwootLoggerInterface
 from infrastructure.telegram.bot import TelegramBot
 
 logger = logging.getLogger(__name__)
@@ -66,10 +67,12 @@ class TelegramHandler:
         bot: TelegramBot,
         parse_use_case: ParseRoutineUseCase,
         generate_use_case: GeneratePresentationUseCase,
+        chatwoot_logger: Optional[ChatwootLoggerInterface] = None,
     ):
         self.bot = bot
         self.parse_use_case = parse_use_case
         self.generate_use_case = generate_use_case
+        self.chatwoot_logger = chatwoot_logger
         self.user_states: Dict[int, RoutineDTO] = {}
 
     def handle_update(self, update: Dict[str, Any]) -> Dict[str, str]:
@@ -87,61 +90,69 @@ class TelegramHandler:
         """Procesa un mensaje de texto."""
         chat_id = message["chat"]["id"]
         text = message.get("text", "").strip()
+        user_name = message.get("from", {}).get("first_name", "Usuario")
 
         if not text:
             return {"status": "empty"}
 
+        # Log incoming message to Chatwoot
+        self._log_incoming(chat_id, user_name, text)
+
         # Comandos
         if text.startswith("/"):
-            return self._handle_command(chat_id, text.lower())
+            return self._handle_command(chat_id, text.lower(), user_name)
 
         # Rutina
-        return self._handle_routine(chat_id, text)
+        return self._handle_routine(chat_id, text, user_name)
 
-    def _handle_command(self, chat_id: int, command: str) -> Dict[str, str]:
+    def _handle_command(
+        self, chat_id: int, command: str, user_name: str = "Usuario"
+    ) -> Dict[str, str]:
         """Procesa comandos."""
 
         if command in ["/start", "/inicio"]:
             self.user_states.pop(chat_id, None)
-            self.bot.send_message(chat_id, MSG_WELCOME)
+            self._send_and_log(chat_id, MSG_WELCOME)
             return {"status": "welcome"}
 
         if command in ["/ayuda", "/help"]:
-            self.bot.send_message(chat_id, MSG_HELP)
+            self._send_and_log(chat_id, MSG_HELP)
             return {"status": "help"}
 
         if command in ["/cancelar", "/cancel"]:
             if chat_id in self.user_states:
                 self.user_states.pop(chat_id)
-                self.bot.send_message(chat_id, MSG_CANCELLED)
+                self._send_and_log(chat_id, MSG_CANCELLED)
             else:
-                self.bot.send_message(chat_id, MSG_NO_PENDING)
+                self._send_and_log(chat_id, MSG_NO_PENDING)
             return {"status": "cancelled"}
 
         if command == "/estado":
             if chat_id in self.user_states:
-                self.bot.send_message(
+                self._send_and_log(
                     chat_id,
                     "📌 Tienes una rutina pendiente.\nUsa /cancelar para descartarla.",
                 )
             else:
-                self.bot.send_message(chat_id, MSG_NO_PENDING)
+                self._send_and_log(chat_id, MSG_NO_PENDING)
             return {"status": "state"}
 
         return {"status": "unknown_command"}
 
-    def _handle_routine(self, chat_id: int, text: str) -> Dict[str, str]:
+    def _handle_routine(
+        self, chat_id: int, text: str, user_name: str = "Usuario"
+    ) -> Dict[str, str]:
         """Procesa texto de rutina."""
 
         if chat_id in self.user_states:
-            self.bot.send_message(
+            self._send_and_log(
                 chat_id,
                 "⚠️ Ya tienes una rutina pendiente.\nUsa /cancelar para descartarla.",
             )
             return {"status": "pending"}
 
         self.bot.send_typing_action(chat_id)
-        self.bot.send_message(chat_id, MSG_PROCESSING)
+        self._send_and_log(chat_id, MSG_PROCESSING)
 
         try:
             routine = self.parse_use_case.execute(text)
@@ -158,11 +169,12 @@ class TelegramHandler:
                     ]
                 ],
             )
+            self._log_outgoing(chat_id, preview)
             return {"status": "awaiting"}
 
         except DomainException as e:
             logger.error(f"Error parsing: {e}")
-            self.bot.send_message(chat_id, MSG_ERROR_PARSE)
+            self._send_and_log(chat_id, MSG_ERROR_PARSE)
             return {"status": "error"}
 
     def _handle_callback(self, callback: Dict[str, Any]) -> Dict[str, str]:
@@ -180,7 +192,7 @@ class TelegramHandler:
 
         if action == "cancel":
             self.user_states.pop(chat_id, None)
-            self.bot.send_message(chat_id, MSG_CANCELLED)
+            self._send_and_log(chat_id, MSG_CANCELLED)
             return {"status": "cancelled"}
 
         return {"status": "unknown_callback"}
@@ -188,25 +200,25 @@ class TelegramHandler:
     def _confirm_presentation(self, chat_id: int) -> Dict[str, str]:
         """Genera la presentación."""
         if chat_id not in self.user_states:
-            self.bot.send_message(chat_id, MSG_NO_PENDING)
+            self._send_and_log(chat_id, MSG_NO_PENDING)
             return {"status": "no_pending"}
 
         routine = self.user_states.pop(chat_id)
 
         self.bot.send_typing_action(chat_id)
-        self.bot.send_message(chat_id, MSG_CREATING)
+        self._send_and_log(chat_id, MSG_CREATING)
 
         try:
             result = self.generate_use_case.execute(routine)
-            self.bot.send_message(
-                chat_id,
-                f"✅ *¡Presentación creada!*\n\n🔗 [Abrir presentación]({result.url})",
+            success_msg = (
+                f"✅ *¡Presentación creada!*\n\n🔗 [Abrir presentación]({result.url})"
             )
+            self._send_and_log(chat_id, success_msg)
             return {"status": "success"}
 
         except DomainException as e:
             logger.error(f"Error generating: {e}")
-            self.bot.send_message(chat_id, MSG_ERROR_SLIDES)
+            self._send_and_log(chat_id, MSG_ERROR_SLIDES)
             return {"status": "error"}
 
     def _format_preview(self, routine: RoutineDTO) -> str:
@@ -223,3 +235,29 @@ class TelegramHandler:
 
         lines.append("¿Generar la presentación?")
         return "\n".join(lines)
+
+    # ─────────────────────────────────────────────────────────
+    # Chatwoot Logging Helpers
+    # ─────────────────────────────────────────────────────────
+
+    def _send_and_log(self, chat_id: int, message: str) -> None:
+        """Envía mensaje al usuario y lo loguea en Chatwoot."""
+        self.bot.send_message(chat_id, message)
+        self._log_outgoing(chat_id, message)
+
+    def _log_incoming(self, chat_id: int, user_name: str, content: str) -> None:
+        """Loguea mensaje entrante en Chatwoot si está habilitado."""
+        if self.chatwoot_logger:
+            self.chatwoot_logger.log_incoming_message(
+                source_id=str(chat_id),
+                user_name=user_name,
+                content=content,
+            )
+
+    def _log_outgoing(self, chat_id: int, content: str) -> None:
+        """Loguea mensaje saliente en Chatwoot si está habilitado."""
+        if self.chatwoot_logger:
+            self.chatwoot_logger.log_outgoing_message(
+                source_id=str(chat_id),
+                content=content,
+            )
